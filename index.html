@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>canvas钢笔工具</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+    }
+ 
+    #pen {
+      position: absolute;
+      top: 0;
+      /* left: calc(50% - 500px); */
+      z-index: 2;
+    }
+    #scene
+    {
+      position: relative;
+      z-index: 3;
+      border: solid 1px gray;
+    }
+  </style>
+</head>
+<body>
+    <canvas id="pen" width="0" height="0"></canvas>
+    <svg id="scene" width="0" height="0">
+      <path id="scene_path_0" d="" fill="none" stroke="black" stroke-width="2" ></path>
+      
+      <g class="loonk_controls_box">
+
+      </g>
+    </svg>
+
+   
+    <!-- <script src="https://cdn.bootcss.com/fabric.js/2.3.0/fabric.js"></script> -->
+    <script src="pentool.js"></script>
+</body>
+</html>

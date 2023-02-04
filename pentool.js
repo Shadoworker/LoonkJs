@@ -1,9 +1,16 @@
  
+ // Classes
+ const END_POINT_CLASS ='loonk_controls_box_endpoint';
+ const CONTROL_POINT_CLASS ='loonk_controls_box_controlpoint';
+// Colors
+ const POINT_COLOR = "#DA2F74";
+ const POINT_BORDER_COLOR = "#FFFFFF";
+ const LINE_COLOR = "#E193B2";
 /**
  * CONTROL POINT
  * 
  */
-const pointStyle = {
+  const pointStyle = {
     control_point_radius: 4,
     control_point_color: '#005cf9'
   }
@@ -12,88 +19,35 @@ const pointStyle = {
     constructor(x, y) {
       this.x = x || 0
       this.y = y || 0
+      this.selected = false // controlpoint 
+      this.ep = null; // which ep this cp belongs
+      this.element = null;
     }
-    
+
     /*  */
-    draw(ratio) {
-      ratio = ratio || 1
-      this.ctx.beginPath()
-      this.ctx.arc(this.x * ratio, this.y * ratio, pointStyle.control_point_radius, 0, Math.PI * 2, false)
+    draw() {
+
+      let svgControlPoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      svgControlPoint.setAttribute('cx', this.x);
+      svgControlPoint.setAttribute('cy', this.y);
+      svgControlPoint.setAttribute('r', 3);
+      svgControlPoint.setAttribute('fill', POINT_COLOR+'66');
+      svgControlPoint.setAttribute('stroke', POINT_COLOR);
+      svgControlPoint.setAttribute('stroke-width', 1);
+      svgControlPoint.classList.add(CONTROL_POINT_CLASS)
+
+      // Set both refs
+      this.element = svgControlPoint;
+      svgControlPoint._point = this;
+
+      this.m_controls.appendChild(svgControlPoint)
+
     }
-    print(ratio) {
-      this.draw(ratio)
-      this.ctx.save()
-      this.ctx.strokeStyle = pointStyle.control_point_color
-      this.ctx.fillStyle = pointStyle.control_point_color
-      this.ctx.stroke()
-      this.ctx.fill()
-      this.ctx.restore()
-    }
-    isInPoint(x, y) {
-      this.draw()
-      if(this.ctx.isPointInPath(x, y)) {
-        return true
-      }
-      return false
-    }
+   
+     
   }
 
 /** CONTROL POINT END  */
-
-/**
- * PATH
- */
-
- class Path{
-    constructor (isClose = false) {
-      // super()
-      this.isClose = isClose  //  
-  
-    }
-  
-    isInPoint(x, y) {
-      let cep
-      for(let i = 0,len = this.length; i < len; i++){
-        cep = this[i].isInPoint(x, y)
-        if(cep){
-          return {
-              ep: this[i], 
-              cp : cep instanceof ControlPoint ? cep : null
-          }
-        }
-      }
-      return null
-    }
-  
-    removeSelected() {
-      this.forEach((ep) => {
-        ep.selected = false
-      })
-    }
-  
-    deleteSelected() {
-      for(let i = 0, len = this.length; i < len; i++){
-        if(this[i].selected){
-          this.splice(i, 1)
-          len = this.length
-          i--
-        }
-      }
-    }
-  
-    addEndPoint(oed, ed) {
-      for(let i = 0, len = this.length; i < len; i++){
-        if(this[i] === oed){
-            this.splice(i + 1, 0, ed);
-        }
-      }
-    }
-  }
-  Object.setPrototypeOf(Path.prototype, Array.prototype);
-
-  
-/** PATH END */
-
 
 /**
  * ENDPOINT
@@ -115,121 +69,101 @@ const endpointStyle = {
       this.cp0 = cp0 || new ControlPoint(x, y)
       this.cp1 = cp1 || new ControlPoint(x, y)
       this.cpBalance = true  //  
+      this.element = null;
+
+      // Set owner
+      this.cp0.ep = this;
+      this.cp1.ep = this;
+
     }
   
-    draw(ratio) {
-      ratio = ratio || 1
-      // this.ctx.beginPath()
-      // this.ctx.arc(this.x * ratio, this.y * ratio, endpointStyle.end_point_length, 0, Math.PI * 2, false)
+    draw() {
+      
+      let svgEndPoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      svgEndPoint.setAttribute('cx', this.x);
+      svgEndPoint.setAttribute('cy', this.y);
+      svgEndPoint.setAttribute('r', 4);
+      svgEndPoint.style.position = "relative";
+      svgEndPoint.style.zIndex = 2;
 
-      var controlsBox = this.svg.getElementsByClassName("loonk_controls_box")[0];
-    //   let anchor = new Anchor(this.x, this.y);
-
-      let arm1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      arm1.setAttribute('cx', this.x);
-      arm1.setAttribute('cy', this.y);
-      arm1.setAttribute('r', 5);
-      arm1.setAttribute('fill', '#f8e');
-      arm1.classList.add('loonk_controls_box_handle1')
-
-      controlsBox.appendChild(arm1)
-      // controlsBox.appendChild(anchor.ref)
-    }
-  
-    print(ratio) {
-      ratio = ratio || 1
-      this.draw(ratio)
-      this.ctx.save()
-      this.ctx.strokeStyle = endpointStyle.end_point_color
-      this.ctx.fillStyle = endpointStyle.fill_color
-      this.ctx.lineWidth = endpointStyle.stroke_width
-      if(this.selected){
-        this.ctx.fillStyle = endpointStyle.hover_fill_color
+      var color = POINT_COLOR+('F1'); // +opacity
+      var stroke = POINT_COLOR;
+      if(!this.selected) 
+      {
+        color = POINT_BORDER_COLOR;
+        stroke = POINT_COLOR;
       }
-      this.ctx.fill()
-      this.ctx.stroke()
-      this.ctx.restore()
+
+      svgEndPoint.setAttribute('fill', color);
+      svgEndPoint.setAttribute('stroke', stroke);
+      svgEndPoint.setAttribute('stroke-width', 1);
+      svgEndPoint.classList.add(END_POINT_CLASS)
+
+      // Set both refs
+      this.element = svgEndPoint;
+      svgEndPoint._point = this;
+
+      this.m_controls.appendChild(svgEndPoint)
+       
     }
     
     printControlPoints(ratio) {
       ratio = ratio || 1
-      this.print(ratio)
+      this.draw();
       if(!this.selected) {
         return
       }
       if(this.cp0.x !== this.x || this.cp0.y !== this.y){
-        this.cp0.print(ratio)
-        this.line(this.cp0.x, this.cp0.y, this.x,this.y, this.ctx, endpointStyle.end_point_color)
+        this.cp0.draw();
+        this.line(this.cp0.x, this.cp0.y, this.x,this.y)
       }
       if(this.cp1.x !== this.x || this.cp1.y !== this.y){
-        this.cp1.print(ratio)
-        this.line(this.cp1.x, this.cp1.y, this.x,this.y, this.ctx, endpointStyle.end_point_color)
+        this.cp1.draw();
+        this.line(this.cp1.x, this.cp1.y, this.x,this.y)
       }
     }
     // draw line
-    line(x1, y1, x2, y2, ctx, color){
-      ctx.save()
-      ctx.beginPath()
-      ctx.moveTo(x1, y1)
-      ctx.strokeStyle = color
-      ctx.lineTo(x2, y2)
-      ctx.stroke()
-      ctx.restore()
+    line(x1, y1, x2, y2){
+     
+      let line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('stroke', LINE_COLOR);
+      line.setAttribute('x1', x1);
+      line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2);
+      line.setAttribute('y2', y2);
+      line.classList.add('loonk_controls_box_endpoint_line')
+      line.style.position = "relative";
+      line.style.zIndex = 1;
+      line.style.pointerEvents = "none";
 
-
-      let line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line1.setAttribute('stroke', "#af1");
-      line1.setAttribute('x1', x1);
-      line1.setAttribute('y1', y1);
-      line1.setAttribute('x2', x2);
-      line1.setAttribute('y2', y2);
-      line1.classList.add('loonk_controls_box_handle1_line')
-
-      var controlsBox = this.svg.getElementsByClassName("loonk_controls_box")[0];
-      controlsBox.appendChild(line1)
+      this.m_controls.appendChild(line)
 
 
     }
-  
-    isInPoint(x, y) {
-      this.draw()
-      if(this.ctx.isPointInPath(x, y)) {
-          return this
-      }
-      if(this.selected){
-        if(this.cp0.isInPoint(x, y)){
-          return this.cp0;
-        }
-        if(this.cp1.isInPoint(x, y)){
-          return this.cp1;
-        }
-      }
-      return false
-    }
-  
-    distanceOfPoint(controlPoint) {
+   
+    distanceOfPoint(cp) {
       return Math.sqrt(
-        Math.pow(this.x - controlPoint.x, 2) + Math.pow(this.y - controlPoint.y, 2)
+        Math.pow(this.x - cp.x, 2) + Math.pow(this.y - cp.y, 2)
       )
     }
   
-    calculateControlPoint(x, y, controlPoint) {
+    calculateControlPoint(x, y, cp) {
       if(this.cpBalance) {
-        controlPoint.counterpart = (
-          controlPoint === this.cp0 ? this.cp1 : this.cp0
+        cp.opposite = (
+          cp === this.cp0 ? this.cp1 : this.cp0
         )
-        controlPoint.counterpart.staticDistance = controlPoint.counterpart.staticDistance
-                                                ? controlPoint.counterpart.staticDistance 
-                                                : this.distanceOfPoint(controlPoint.counterpart)
+        cp.opposite.staticDistance = cp.opposite.staticDistance
+                                                ? cp.opposite.staticDistance 
+                                                : this.distanceOfPoint(cp.opposite)
   
-        let staticDistance = controlPoint.counterpart.staticDistance
-        let dynamicDistance = this.distanceOfPoint(controlPoint)
+        let staticDistance = cp.opposite.staticDistance
+        let dynamicDistance = this.distanceOfPoint(cp)
   
-        controlPoint.counterpart.x = staticDistance / dynamicDistance * (this.x - x) + this.x
-        controlPoint.counterpart.y = staticDistance / dynamicDistance * (this.y - y) + this.y
+        cp.opposite.x = staticDistance / dynamicDistance * (this.x - x) + this.x
+        cp.opposite.y = staticDistance / dynamicDistance * (this.y - y) + this.y
       }
-      controlPoint.x = x
-      controlPoint.y = y
+      cp.x = x
+      cp.y = y
     }
   }
 
@@ -239,310 +173,45 @@ const endpointStyle = {
 
 
 /**
- * 
- * ANCHOR
- * 
- * -------- VEC2 --------------
+ * PATH
  */
 
-class Vec2 {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
-    }
+class Path{
+  constructor (isClose = false) {
 
-    get length () {
-        return Math.sqrt(this.x ** 2 + this.y ** 2);
-    }
+    this.isClose = isClose  
 
-    multiplyScalar (s) {
-        return new Vec2(this.x * s, this.y * s);
-    }
+  }
 
-    // anti-clockwise rotation
-    rotate (angle) {
-        let sin = Math.sin(angle * Math.PI / 180);
-        let cos = Math.cos(angle * Math.PI / 180);
-        return new Vec2(this.x * cos - this.y * sin, this.y * cos + this.x * sin);
+  updateSelectedEndPoint() {
+    this.forEach((ep) => {
+      ep.selected = false
+    })
+  }
+
+  deleteSelected() {
+    for(let i = 0, len = this.length; i < len; i++){
+      if(this[i].selected){
+        this.splice(i, 1)
+        len = this.length
+        i--
+      }
     }
+  }
+
+  addEndPoint(oed, ed) {
+    for(let i = 0, len = this.length; i < len; i++){
+      if(this[i] === oed){
+          this.splice(i + 1, 0, ed);
+      }
+    }
+  }
 }
+Object.setPrototypeOf(Path.prototype, Array.prototype);
 
-// --------------------------
+/** PATH END */
 
-class Anchor {
-    constructor(x, y, isInsert = false) {
-        this.eventList = {};
-        this.arm1 = new Vec2(0, 0);
-        this.arm2 = new Vec2(0, 0);
-        this.size = 8;
-        this.armSize = this.size / 2;
-        this.x = x;
-        this.y = y;
-        this.fill = '#fff';
-        this.stroke = '#000';
-        this.armFill = '#00ffaa';
-        this.lineColor = '#000';
-        this.relative = true;
-        this.curves = [];
-        this.isInsert = isInsert;
-        this.ref = this.getElement();
-    }
-
-    on (name, fn) {
-        if (!this.eventList[name]) {
-            this.eventList[name] = [];
-        }
-        this.eventList[name].push(fn);
-    }
-
-    off (name, fn) {
-        if (!this.eventList[name]) {
-            // console.error('no event ' + name);
-            return;
-        }
-        let index = this.eventList[name].indexOf(fn);
-        if (index >= 0) {
-            this.eventList[name].splice(index, 1);
-        }
-    }
-
-    dispatch () {
-        let name = Array.prototype.shift.call(arguments);
-        let args = Array.prototype.slice.call(arguments);
-        if (!this.eventList[name]) {
-            // console.error('no event ' + name);
-            return;
-        }
-        for (let i = 0; i < this.eventList[name].length; i++) {
-            let fn = this.eventList[name][i];
-            fn.apply(this, args);
-        }
-    }
-
-    getElement () {
-        let that = this;
-        let wrapper = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        wrapper.classList.add('loonk_controls_box')
-        let point = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        point.setAttribute('x', this.x);
-        point.setAttribute('y', this.y);
-        point.setAttribute('width', this.size);
-        point.setAttribute('height', this.size);
-        point.setAttribute('fill', this.fill);
-        point.setAttribute('stroke', this.stroke);
-        point.classList.add('loonk_controls_box_base')
-
-
-        let arm1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        arm1.setAttribute('cx', this.x + this.arm1.x + this.size / 2);
-        arm1.setAttribute('cy', this.y + this.arm1.y + this.size / 2);
-        arm1.setAttribute('r', this.armSize);
-        arm1.setAttribute('fill', this.armFill);
-        arm1.classList.add('loonk_controls_box_handle1')
-
-
-        let arm2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        arm2.setAttribute('cx', this.x + this.arm2.x + this.size / 2);
-        arm2.setAttribute('cy', this.y + this.arm2.y + this.size / 2);
-        arm2.setAttribute('r', this.armSize);
-        arm2.setAttribute('fill', this.armFill);
-        arm2.classList.add('loonk_controls_box_handle2')
-
-        let line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line1.setAttribute('stroke', this.armFill);
-        line1.setAttribute('x1', this.x);
-        line1.setAttribute('y1', this.y);
-        line1.setAttribute('x2', this.x + this.arm1.x);
-        line1.setAttribute('y2', this.y + this.arm1.y);
-        line1.classList.add('loonk_controls_box_handle1_line')
-
-
-        let line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line2.setAttribute('stroke', this.armFill);
-        line2.setAttribute('x1', this.x + this.size / 2);
-        line2.setAttribute('y1', this.y + this.size / 2);
-        line2.setAttribute('x2', this.x + this.arm2.x + this.armSize / 2);
-        line2.setAttribute('y2', this.y + this.arm2.y + this.armSize / 2);
-        line2.classList.add('loonk_controls_box_handle2_line')
-
-        // arm1.style.display = 'none';
-        // arm2.style.display = 'none';
-
-
-        point.addEventListener('mousedown', function (e) {
-            e.stopPropagation();
-            e.preventDefault();
-            let ctrlKey = e.ctrlKey;
-            if (/mac/i.test(navigator.platform)) {
-                ctrlKey = e.metaKey;
-            }
-            if (ctrlKey) {
-                let initX = that.x;
-                let initY = that.y;
-                that.dispatch('select');
-                let move = function (ev) {
-                    let offsetX = ev.clientX - e.clientX;
-                    let offsetY = ev.clientY - e.clientY;
-                    that.x = initX + offsetX;
-                    that.y = initY + offsetY;
-                    that.update();
-                }
-                let up = function () {
-                    document.removeEventListener('mousemove', move);
-                    document.removeEventListener('mouseup', up);
-                }
-
-                document.addEventListener('mousemove', move);
-                document.addEventListener('mouseup', up);
-            } else if (e.altKey) {
-                let event = new MouseEvent('mousedown', { clientX: e.clientX, clientY: e.clientY });
-                arm1.dispatchEvent(event);
-            } else if (that.isHead) {
-                that.dispatch('loop');
-            } else if (!that.isInsert) {
-                that.delete();
-                that = null;
-            }
-        });
-        arm1.onmousedown = function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            that.dispatch('select');
-            let arm1StartPosX = e.clientX;
-            let arm1StartPosY = e.clientY;
-            let arm1InitPosX = that.arm1.x;
-            let arm1InitPosY = that.arm1.y;
-            let arm2InitPosX = that.arm2.x;
-            let arm2InitPosY = that.arm2.y;
-            let move = function (ev) {
-                let offsetX = ev.clientX - arm1StartPosX;
-                let offsetY = ev.clientY - arm1StartPosY;
-                that.arm1.x = arm1InitPosX + offsetX;
-                that.arm1.y = arm1InitPosY + offsetY;
-                if (that.relative) {
-                    that.arm2.x = arm2InitPosX - offsetX;
-                    that.arm2.y = arm2InitPosY - offsetY;
-                }
-                that.update();
-            }
-
-            let up = function (e) {
-                document.removeEventListener('mousemove', move);
-                document.removeEventListener('mouseup', up);
-            }
-            document.addEventListener('mousemove', move);
-            document.addEventListener('mouseup', up);
-        }
-
-
-        arm2.onmousedown = function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            that.dispatch('select');
-            let arm2StartPosX = e.clientX;
-            let arm2StartPosY = e.clientY;
-            let arm1InitPosX = that.arm1.x;
-            let arm1InitPosY = that.arm1.y;
-            let arm2InitPosX = that.arm2.x;
-            let arm2InitPosY = that.arm2.y;
-            let move = function (ev) {
-                let offsetX = ev.clientX - arm2StartPosX;
-                let offsetY = ev.clientY - arm2StartPosY;
-                that.arm2.x = arm2InitPosX + offsetX;
-                that.arm2.y = arm2InitPosY + offsetY;
-                if (that.relative) {
-                    that.arm1.x = arm1InitPosX - offsetX;
-                    that.arm1.y = arm1InitPosY - offsetY;
-                }
-                that.update();
-            }
-
-            let up = function (e) {
-                document.removeEventListener('mousemove', move);
-                document.removeEventListener('mouseup', up);
-            }
-            document.addEventListener('mousemove', move);
-            document.addEventListener('mouseup', up);
-        }
-
-        wrapper.appendChild(line1);
-        wrapper.appendChild(line2);
-        wrapper.appendChild(arm2);
-        wrapper.appendChild(arm1);
-        wrapper.appendChild(point);
-        this.pointElement = point;
-        this.arm1Element = arm1;
-        this.arm2Element = arm2;
-        this.line1Element = line1;
-        this.line2Element = line2;
-        return wrapper;
-
-    }
-
-    update () {
-        this.pointElement.setAttribute('x', this.x);
-        this.pointElement.setAttribute('y', this.y);
-        this.arm1Element.setAttribute('cx', this.x + this.arm1.x + this.size / 2);
-        this.arm1Element.setAttribute('cy', this.y + this.arm1.y + this.size / 2);
-        this.arm2Element.setAttribute('cx', this.x + this.arm2.x + this.size / 2);
-        this.arm2Element.setAttribute('cy', this.y + this.arm2.y + this.size / 2);
-
-        this.line1Element.setAttribute('x1', this.x + this.size / 2);
-        this.line1Element.setAttribute('y1', this.y + this.size / 2);
-        this.line1Element.setAttribute('x2', this.x + this.arm1.x + this.armSize);
-        this.line1Element.setAttribute('y2', this.y + this.arm1.y + this.armSize);
-
-        this.line2Element.setAttribute('x1', this.x + this.size / 2);
-        this.line2Element.setAttribute('y1', this.y + this.size / 2);
-        this.line2Element.setAttribute('x2', this.x + this.arm2.x + this.armSize);
-        this.line2Element.setAttribute('y2', this.y + this.arm2.y + this.armSize);
-        this.dispatch('update');
-    }
-
-    delete () {
-        this.ref.remove();
-        this.dispatch('delete');
-        this.ref = null;
-        this.leftLine = null;
-        this.rightLine = null;
-    }
-
-    hideArm1 () {
-        this.arm1Element.style.display = 'none';
-        this.line1Element.style.display = 'none';
-    }
-
-    hideArm2 () {
-        this.arm2Element.style.display = 'none';
-        this.line2Element.style.display = 'none';
-    }
-
-    showArm1 () {
-        this.arm1Element.style.display = 'block';
-        this.line1Element.style.display = 'block';
-    }
-    showArm2 () {
-        this.arm2Element.style.display = 'block';
-        this.line2Element.style.display = 'block';
-    }
-
-    addCurve (curve) {
-        this.curves.push(curve);
-    }
-
-    deleteCurve (curve) {
-        let index = this.curves.indexOf(curve);
-        if (index > -1) {
-            this.curves.splice(index, 1);
-        }
-    }
-}
-
-
-/**
- * ANCHOR END
- */
-
+ 
 /**
  *  
  * PEN
@@ -553,50 +222,44 @@ const SCENE_WIDTH = 800;
 const SCENE_HEIGHT = 600;
 
 class Pen {
-    constructor (targetCvs = '#pen', _width = SCENE_WIDTH, _height = SCENE_HEIGHT) {
+    constructor (_sceneRef = '#scene', _width = SCENE_WIDTH, _height = SCENE_HEIGHT) {
     
-    this.sceneWidth = _width;
-    this.sceneHeight = _height;
+    this.m_sceneWidth = _width;
+    this.m_sceneHeight = _height;
     
-    this.canvas = document.querySelector(targetCvs)
-    this.svg = document.querySelector("#scene")
-    this.controls = document.querySelector("#loonk_controls_box")
+    this.m_svg = document.querySelector(_sceneRef)
+    this.m_controls = this.createControlsContainer();
     this.currentPath = document.querySelector("#scene_path_0")
-    this.ctx = this.canvas.getContext('2d')
-    this.stroke_color = '#ffc107' // 线条颜色
+    this.stroke_color = '#ffc107' //  
     }
     reset () {
       this.paths = []
       this.paths.push(new Path())
-  
       this.dragging = false  //  
       this.editCpBalance = false //  
       this.isNewEndPoint = false  //  
-      this.currentEndPoint = null  //  
+      this.currentSelectedPoint = null  //  
       this.draggingControlPoint = null  //  
       this.pathStarted = false;
-      // this.zoomRatio = 1  //  
   
-      ControlPoint.prototype.ctx = this.ctx
-      ControlPoint.prototype.svg = this.svg
-      EndPoint.prototype.ctx = this.ctx
-      EndPoint.prototype.svg = this.svg
-      EndPoint.prototype.canvas = this
-   
-      this.canvas.width =  this.sceneWidth
-      this.canvas.height = this.sceneHeight
-
-      this.svg.setAttribute("width", this.sceneWidth)
-      this.svg.setAttribute("height",  this.sceneHeight)
+      // Define controls container
+      ControlPoint.prototype.m_controls = this.m_controls
+      EndPoint.prototype.m_controls = this.m_controls
+      
+      
+      this.m_svg.setAttribute("width", this.m_sceneWidth)
+      this.m_svg.setAttribute("height",  this.m_sceneHeight)
+      
       this.active()
+
     }
   
     // the positoin on canvas
     positionToCanvas (x, y) {
-      let bbox = this.canvas.getBoundingClientRect()
+      let bbox = this.m_svg.getBoundingClientRect()
       return {
-        x: x - bbox.left * (this.canvas.width  / bbox.width),
-        y: y - bbox.top  * (this.canvas.height / bbox.height)
+        x: x - bbox.left * (this.m_svg.clientWidth  / bbox.width),
+        y: y - bbox.top  * (this.m_svg.clientHeight / bbox.height)
       }
     }
     // mouse click
@@ -608,34 +271,40 @@ class Pen {
       this.dragging = true
       this.isNewEndPoint = false
       this.draggingControlPoint = false
-      this.currentEndPoint = this.isExistPoint(location.x, location.y)
-      this.removeSelectedEndPoint()
-  
-      if(this.currentEndPoint ){
+      // this.currentSelectedPoint = this.isExistPoint(location.x, location.y)
+      this.currentSelectedPoint = this.getPoint(e);
+      
+      
+      if(!this.isControlPoint(this.currentSelectedPoint))
+        this.updateSelectedEndPointEndPoint()
+      
+
+
+      if(this.currentSelectedPoint ){
         // if the endPoint exist
-        this.currentEndPoint.selected = true;
+        this.currentSelectedPoint.selected = true;
   
         if(this.editCpBalance && !this.draggingControlPoint) {
-          let ced = this.currentEndPoint
-          ced.cpBalance = true
-          ced.cp0.x = ced.cp1.x = ced.x
-          ced.cp0.y = ced.cp1.y = ced.y
+          let cep = this.currentSelectedPoint
+          cep.cpBalance = true
+          cep.cp0.x = cep.cp1.x = cep.x
+          cep.cp0.y = cep.cp1.y = cep.y
           this.isNewEndPoint = true
         }
   
-        if(!this.draggingControlPoint && this.currentEndPoint === this.paths[this.paths.length -1][0] && this.paths[this.paths.length -1].length > 2){
+        if(!this.draggingControlPoint && this.currentSelectedPoint === this.paths[this.paths.length -1][0] && this.paths[this.paths.length -1].length > 2){
             // click first endpoint
             // close path
             this.createPath()
         }
       } else {
-         this.currentEndPoint = this.createEndPoint(location.x, location.y)
+         this.currentSelectedPoint = this.createEndPoint(location.x, location.y)
          this.isNewEndPoint = true;
          if(this.editCpBalance && selectedPath){
             // add endpoint to selectedendpoint after
-           selectedPath.path.addEndPoint(selectedPath.ep, this.currentEndPoint)
+           selectedPath.path.addEndPoint(selectedPath.ep, this.currentSelectedPoint)
         }else {
-          this.paths[this.paths.length - 1].push(this.currentEndPoint)
+          this.paths[this.paths.length - 1].push(this.currentSelectedPoint)
         }
       }
       this.renderer()
@@ -648,59 +317,59 @@ class Pen {
         return
       }
       let loc = this.positionToCanvas(e.clientX, e.clientY)
-      let ced = this.currentEndPoint
+      let csp = this.currentSelectedPoint // current selected point
   
-      this.svg.style.cursor = 'move'
+      this.m_svg.style.cursor = 'move'
   
       if(this.isNewEndPoint){
-          ced.cp1.x = loc.x
-          ced.cp1.y = loc.y
+          csp.cp1.x = loc.x
+          csp.cp1.y = loc.y
   
-          ced.cp0.x = ced.x * 2 - loc.x
-          ced.cp0.y = ced.y * 2 - loc.y
+          csp.cp0.x = csp.x * 2 - loc.x
+          csp.cp0.y = csp.y * 2 - loc.y
       } else if (this.draggingControlPoint){
           // Dragging controlPoint
-          console.log('dragging controlPoint')
-  
+
           if(this.editCpBalance){
-              ced.cpBalance = false
+              csp.cpBalance = false
           }
           this.draggingControlPoint.x = loc.x
           this.draggingControlPoint.y = loc.y
-          ced.calculateControlPoint(loc.x, loc.y, this.draggingControlPoint)
+
+          csp.ep.calculateControlPoint(loc.x, loc.y, this.draggingControlPoint)
       } else {
           // Dragging endpoint
           let offset = {
-            x: loc.x - ced.x,
-            y: loc.y-ced.y
+            x: loc.x - csp.x,
+            y: loc.y-csp.y
           }
-          ced.x = loc.x
-          ced.y = loc.y
+          csp.x = loc.x
+          csp.y = loc.y
   
-          ced.cp1.x += offset.x
-          ced.cp1.y += offset.y
-          ced.cp0.x += offset.x
-          ced.cp0.y += offset.y
+          csp.cp1.x += offset.x
+          csp.cp1.y += offset.y
+          csp.cp0.x += offset.x
+          csp.cp0.y += offset.y
+
       }
       this.renderer()
     }
     onMouseUp(e) {
-      // console.log('mouseup', e)
-      this.svg.style.cursor = 'default'
+      this.m_svg.style.cursor = 'default'
       this.dragging = false
       if(this.draggingControlPoint){
-        if(this.draggingControlPoint.counterpart) {
-          delete this.draggingControlPoint.counterpart.staticDistance
+        if(this.draggingControlPoint.opposite) {
+          delete this.draggingControlPoint.opposite.staticDistance
         }
-        delete this.draggingControlPoint.counterpart
+        delete this.draggingControlPoint.opposite
         this.draggingControlPoint = false
       }
     }
   
     // key down: provide delete endPoint
     onKeyDown(e) {
-      switch(e.keyCode) {
-        case 8: 
+      switch(e.key) {
+        case "Delete": 
           e.preventDefault()
           this.deleteEndPoint()
           this.renderer()
@@ -715,35 +384,54 @@ class Pen {
         mouseup(e) { that.onMouseUp(e) },
         keydown(e) { that.onKeyDown(e) }
     };
-      this.svg.addEventListener('mousedown', listeners.mousedown, false)
-      this.svg.addEventListener('mousemove', listeners.mousemove, false)
-      this.svg.addEventListener('mouseup', listeners.mouseup, false)
+      this.m_svg.addEventListener('mousedown', listeners.mousedown, false)
+      this.m_svg.addEventListener('mousemove', listeners.mousemove, false)
+      this.m_svg.addEventListener('mouseup', listeners.mouseup, false)
       document.addEventListener('keydown', listeners.keydown, false)
     }
   
   
     createPath() {
-      this.paths[this.paths.length - 1].isClose = true
-      this.paths.push(new Path())
+      this.paths[this.paths.length - 1].isClose = true // Close previous path
+      this.paths.push(new Path()) // Add new one
+    }
+
+    createControlsContainer()
+    {
+      let group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      group.classList.add("loonk_controls_box");
+      this.m_svg.appendChild(group)
+      this.m_controls = group;
+      return group;
     }
   
     getSelectedPath() {
       for(let i = 0, len1 = this.paths.length; i < len1; i++){
         for(let j = 0, len2 = this.paths[i].length; j < len2; j++){
           if(this.paths[i][j].selected){
-            return {
+             var selectedPath = {
               path: this.paths[i],
               ep: this.paths[i][j]
             }
+            return selectedPath;
           }
         }
       }
       return null
     }
   
-    removeSelectedEndPoint() {
+    isControlPoint(_point)
+    {
+      if(_point)
+      {
+        return (_point.element.classList.contains(CONTROL_POINT_CLASS))
+      }
+      return false;
+    }
+
+    updateSelectedEndPointEndPoint() {
       this.paths.forEach((path) => {
-          path.removeSelected()
+          path.updateSelectedEndPoint()
       })
     }
   
@@ -766,28 +454,30 @@ class Pen {
       }
     }
   
-    isExistPoint(x, y) {
-      let cep, i = 0, l
-      for(l = this.paths.length; i< l; i++){
-        cep = this.paths[i].isInPoint(x, y)
-        if(cep){
-          if(cep.cp instanceof ControlPoint){
-              // set  controlpoint
-              this.draggingControlPoint = cep.cp
-          }
-          return cep.ep
-        }
+
+    getPoint(e)
+    {
+      var _el = e.target;
+      if(_el.classList.contains(END_POINT_CLASS))
+      {
+        return _el._point;
       }
-      return null
+      else if(_el.classList.contains(CONTROL_POINT_CLASS))
+      {
+        var p = _el._point;
+        this.draggingControlPoint = p;
+        return p;
+      }
+      return null;
     }
+
     // renderer the spline
     renderer() {
       let ep, prev_ep, ctx = this.ctx
   
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
       this.currentPath.setAttribute("d", "")
       this.pathStarted = false;
-      this.svg.getElementsByClassName('loonk_controls_box')[0].innerHTML = null;
+      this.m_svg.querySelector('.loonk_controls_box').innerHTML = null;
 
      
       this.paths.forEach((path) => {
@@ -803,7 +493,6 @@ class Pen {
           if(i > 0) {
             // draw line
             prev_ep = path[i - 1];
-            // console.log("draw")
             this.bezierCurveTo(prev_ep, ep, ctx)
           }
         }
@@ -816,13 +505,6 @@ class Pen {
     }
   
     bezierCurveTo(prev_ep, ep, ctx) {
-        ctx.save()
-        ctx.beginPath()
-        ctx.strokeStyle = this.stroke_color
-        ctx.lineWidth = 2
-        ctx.moveTo(prev_ep.x, prev_ep.y)
-
-
     
         var d = this.currentPath.getAttribute('d');
         d += 'C'+ prev_ep.cp1.x + "," + prev_ep.cp1.y + " " +
@@ -831,17 +513,6 @@ class Pen {
 
         this.currentPath.setAttribute("d", d)
         
-        ctx.bezierCurveTo(
-            prev_ep.cp1.x, prev_ep.cp1.y,
-            ep.cp0.x, ep.cp0.y,
-            ep.x, ep.y
-        )
-
-
-        
-        // ctx.quadraticCurveTo(prev_ep.cp1.x, prev_ep.cp1.y, ep.x, ep.y)
-        ctx.stroke()
-        ctx.restore()
     }
   }
   
@@ -857,12 +528,11 @@ class Pen {
 window.addEventListener('load',()=>{
 
     // Use class Pen here 
-    let pen = new Pen()
+    let pen = new Pen('#scene')
     pen.reset()
 
 }, false);
  
-
 
 /**
  * MAIN END

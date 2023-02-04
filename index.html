@@ -10,33 +10,39 @@
       margin: 0;
       padding: 0;
     }
- 
-    #pen {
-      position: absolute;
-      top: 0;
-      /* left: calc(50% - 500px); */
-      z-index: 2;
+    g, circle, line
+    {
+      position: relative !important;
     }
     #scene
     {
       position: relative;
       z-index: 3;
+      background-color: #F4F4F4;
       border: solid 1px gray;
     }
+    .loonk_controls_box_endpoint:hover
+    {
+      fill : #da2f7d;
+      stroke: #da2f7d;
+      transition: all ease-in 0.10s;
+    }
+    .loonk_controls_box_controlpoint:hover
+    {
+      fill : #aa205e;
+      stroke: #a21c58;
+      transition: all ease-in 0.10s;
+    }
+
   </style>
 </head>
 <body>
-    <canvas id="pen" width="0" height="0"></canvas>
+
     <svg id="scene" width="0" height="0">
-      <path id="scene_path_0" d="" fill="none" stroke="black" stroke-width="2" ></path>
-      
-      <g class="loonk_controls_box">
-
-      </g>
+      <path id="scene_path_0" d="" fill="none" stroke="black" stroke-width="1.5" ></path>
+     
     </svg>
-
    
-    <!-- <script src="https://cdn.bootcss.com/fabric.js/2.3.0/fabric.js"></script> -->
     <script src="pentool.js"></script>
 </body>
 </html>

@@ -2,6 +2,7 @@
  // Classes
  const LOONK_PATH_CLASS ='loonk_scene_path';
  const LOONK_PATH_HELPER_CLASS ='loonk_scene_path_helper';
+ const LOONK_POINT_HELPER_CLASS ='loonk_scene_point_helper';
  const LOONK_PATH_CLASS_HOVER ='loonk_scene_path_hover';
  const END_POINT_CLASS ='loonk_controls_box_endpoint';
  const CONTROL_POINT_CLASS ='loonk_controls_box_controlpoint';
@@ -474,12 +475,6 @@ class Loonk {
          
           this.m_path.m_points.splice(insertIndex, 0, pointToInsert)
 
-          // if(this.m_portion) // Remove portion
-          // {
-          //   this.m_svg.removeChild(this.m_portion)
-          //   // this.m_portion = null;
-          // }
-
           this.render()
         }
  
@@ -501,13 +496,16 @@ class Loonk {
 
         e.preventDefault(); e.stopPropagation();
 
-        // Remove helpers : Higlighters
-        var helpers = this.m_svg.querySelectorAll("."+ LOONK_PATH_HELPER_CLASS)
-        helpers.forEach(el => {
-
+        // Remove pathHelpers : Higlighters
+        var pathHelpers = this.m_svg.querySelectorAll("."+ LOONK_PATH_HELPER_CLASS)
+        pathHelpers.forEach(el => {
           this.m_svg.removeChild(el);
-          
         });
+
+        // Remove pointHelper
+        var pointHelper = this.m_svg.querySelector("."+LOONK_POINT_HELPER_CLASS);
+        if(pointHelper)
+          this.m_controls.removeChild(pointHelper);
 
       }
 
@@ -537,6 +535,10 @@ class Loonk {
           {  
             portion.setAttribute("stroke", POINT_COLOR)
             portion.setAttribute("stroke-width", 2.5)
+
+            // Display a point on path
+            this.createHelperPoint(pos.x, pos.y);
+
           }
           this.m_portion = portion;
           break;
@@ -575,6 +577,30 @@ class Loonk {
       path.setAttribute("d", d);
 
       return path;
+
+    }
+
+    createHelperPoint(_x, _y)
+    {
+
+      if(this.m_svg.querySelector("."+LOONK_POINT_HELPER_CLASS))
+      {
+        var p = this.m_svg.querySelector("."+LOONK_POINT_HELPER_CLASS);
+        p.setAttribute('cx', _x);
+        p.setAttribute('cy', _y);
+        return;
+      }
+
+      let point = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      point.setAttribute('cx', _x);
+      point.setAttribute('cy', _y);
+      point.setAttribute('r', 4);
+      point.setAttribute('fill', POINT_COLOR);
+      point.setAttribute('stroke', POINT_COLOR);
+      point.setAttribute('stroke-width', 1);
+      point.classList.add(LOONK_POINT_HELPER_CLASS)
+
+      this.m_controls.append(point);
 
     }
   

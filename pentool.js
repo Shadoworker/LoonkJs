@@ -1,6 +1,7 @@
  
  // Classes
  const LOONK_PATH_CLASS ='loonk_scene_path';
+ const LOONK_PATH_HELPER_CLASS ='loonk_scene_path_helper';
  const LOONK_PATH_CLASS_HOVER ='loonk_scene_path_hover';
  const END_POINT_CLASS ='loonk_controls_box_endpoint';
  const CONTROL_POINT_CLASS ='loonk_controls_box_controlpoint';
@@ -281,6 +282,7 @@ class Loonk {
       this.m_currentSelectedPoint = null   
       this.m_draggingControlPoint = null   
       this.m_pathStarted = false;
+      this.m_portion = false;
 
       // Define controls container
       ControlPoint.prototype.m_controls = this.m_controls
@@ -454,47 +456,29 @@ class Loonk {
     observePath()
     {
 
+      // Mouse down
       this.m_currentPath.onmousedown = (e)=>{
-        e.preventDefault();
-        e.stopPropagation();
+        e.preventDefault(); e.stopPropagation();
 
         let pos = this.positionToCanvas(e.clientX, e.clientY)
         let pointToInsert = this.createEndPoint(pos.x, pos.y)
-
-        // Get the path portion and the insertion index
-        var insertIndex = -1;
-        var contactPoint = this.createSVGPoint(pos.x, pos.y)
-        for (let i = 0; i < this.m_path.m_points.length; i++)  // Loop through all portions : -1 to avoid loop
-        {
-          // Get current point and next
-          const p = this.m_path.m_points[i];
-          var nextI = (i+1) > (this.m_path.m_points.length-1) ? 0 : (i+1);
-          const nextP = this.m_path.m_points[nextI];
-
-          // Create the portion 
-          var portion = this.createHelperPath(p, nextP)
-          this.m_svg.append(portion)
-          // and check if current mouse pos is in this portion
-          if(portion.isPointInStroke(contactPoint))
-          {
-            insertIndex = nextI;
-
-            this.m_svg.removeChild(portion)
-
-            break;
-          }
-
-          this.m_svg.removeChild(portion)
-
-        }
  
+        // Get the path portion and the insertion index
+        var insertIndex = this.getInsertionIndex(pos);
+  
         // Check if drawmode left
         if(!this.m_drawing)
         {
           if(insertIndex != -1) // Not in path
           this.selectPath(e)
-          
+         
           this.m_path.m_points.splice(insertIndex, 0, pointToInsert)
+
+          // if(this.m_portion) // Remove portion
+          // {
+          //   this.m_svg.removeChild(this.m_portion)
+          //   // this.m_portion = null;
+          // }
 
           this.render()
         }
@@ -502,43 +486,70 @@ class Loonk {
 
       }
 
+      // Mouse enter on path
       this.m_currentPath.onmouseover = (e)=>{
 
-        e.preventDefault();
-        e.stopPropagation();
+        e.preventDefault(); e.stopPropagation();
 
         let pos = this.positionToCanvas(e.clientX, e.clientY)
-        // let pointToInsert = this.createEndPoint(pos.x, pos.y)
+       
+        this.getInsertionIndex(pos, true);
 
-        // Get the path portion and the insertion index
-        var insertIndex = -1;
-        var contactPoint = this.createSVGPoint(pos.x, pos.y)
-        for (let i = 0; i < this.m_path.m_points.length; i++)  // Loop through all portions : -1 to avoid loop
-        {
-          // Get current point and next
-          const p = this.m_path.m_points[i];
-          var nextI = (i+1) > (this.m_path.m_points.length-1) ? 0 : (i+1);
-          const nextP = this.m_path.m_points[nextI];
+      }
+      // Mouse leave path
+      this.m_currentPath.onmouseleave = (e)=>{
 
-          // Create the portion 
-          var portion = this.createHelperPath(p, nextP)
-          this.m_svg.append(portion)
-          // and check if current mouse pos is in this portion
-          if(portion.isPointInStroke(contactPoint))
-          {
-            insertIndex = nextI;
+        e.preventDefault(); e.stopPropagation();
 
-            this.m_svg.removeChild(portion)
+        // Remove helpers : Higlighters
+        var helpers = this.m_svg.querySelectorAll("."+ LOONK_PATH_HELPER_CLASS)
+        helpers.forEach(el => {
 
-            break;
-          }
-
-          this.m_svg.removeChild(portion)
-
-        }
+          this.m_svg.removeChild(el);
+          
+        });
 
       }
 
+
+    }
+
+    getInsertionIndex(pos, _highlightPortion = false)
+    {
+      // Get the path portion and the insertion index
+      var insertIndex = -1;
+      var contactPoint = this.createSVGPoint(pos.x, pos.y)
+      for (let i = 0; i < this.m_path.m_points.length; i++)   
+      {
+        // Get current point and next
+        const p = this.m_path.m_points[i];
+        var nextI = (i+1) > (this.m_path.m_points.length-1) ? 0 : (i+1);
+        const nextP = this.m_path.m_points[nextI];
+
+        // Create the portion 
+        var portion = this.createHelperPath(p, nextP)
+        this.m_svg.append(portion)
+        // and check if current mouse pos is in this portion
+        if(portion.isPointInStroke(contactPoint))
+        {
+          insertIndex = nextI;
+          if(_highlightPortion)
+          {  
+            portion.setAttribute("stroke", POINT_COLOR)
+            portion.setAttribute("stroke-width", 2.5)
+          }
+          this.m_portion = portion;
+          break;
+        }
+        else
+        {
+          this.m_svg.removeChild(portion)
+        }
+
+
+      }
+ 
+      return insertIndex;
 
     }
 
@@ -553,10 +564,11 @@ class Loonk {
     {
 
       let path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      // path.classList.add(LOONK_PATH_CLASS);
+      path.classList.add(LOONK_PATH_HELPER_CLASS);
       path.setAttribute("fill", "none");
       path.setAttribute("stroke", "transparent");
       path.setAttribute("stroke-width", 1.5);
+      path.style.pointerEvents = "none";
 
       var curve = this.createBezier(p1, p2)
       var d = "M"+p1.x+ ","+p1.y + curve;

@@ -234,9 +234,12 @@ class Pen {
 
     this.m_pathElements = [];
 
+    this.m_path = null;
+
   }
-    reset () {
+    reset (_enabled = false) {
   
+      this.m_path = null;
       this.m_path = new Path();
       this.m_paths = []
       this.m_paths.push(this.m_path)
@@ -257,10 +260,9 @@ class Pen {
       this.m_svg.setAttribute("width", this.m_sceneWidth)
       this.m_svg.setAttribute("height",  this.m_sceneHeight)
       
-      this.m_pathElements.push(this.m_currentPath);
-
+      if(_enabled) return // avoiding to activate handlers multiple times
+        
       this.active()
-
       this.observePath();
 
     }
@@ -276,6 +278,7 @@ class Pen {
     // mouse click
     onMouseDown(e) {
   
+      console.log("down");
       let location = this.positionToCanvas(e.clientX, e.clientY)
       let selectedPath = this.getSelectedPath()
   
@@ -302,9 +305,11 @@ class Pen {
           this.isNewEndPoint = true
         }
   
+        console.log([this.draggingControlPoint, this.currentSelectedPoint, this.m_path.m_points[0], this.m_path.m_points.length])
         if(!this.draggingControlPoint && this.currentSelectedPoint === this.m_path.m_points[0] && this.m_path.m_points.length > 2){
             // click first endpoint
             // close path
+            console.log("closeFall")
             this.createPath()
         }
       } else {
@@ -426,10 +431,10 @@ class Pen {
 
       // Close current Path
       this.m_path.isClose = true // Close previous path
-      this.renderer()
+      // this.renderer()
 
       // Init new Path : 
-      this.reset()
+      // this.reset()
       // this.m_paths = [];
       // this.m_path.m_points.push() // Add new one
     }
@@ -492,15 +497,13 @@ class Pen {
   
     // delete point
     deleteEndPoint() {
-      let path = this.m_path
-      // for(let i = 0, l = path.length; i < l; i++){
-        path[i].deleteSelected()
-        if(path[i].length === 0 && (i + 1 !== l)){
-          path.splice(i, 1)
-          l = path.length
-          i--
-        }
-      // }
+
+      this.m_path[i].deleteSelected()
+      if(this.m_path[i].length === 0 && (i + 1 !== l)){
+        this.m_path.splice(i, 1)
+        l = this.m_path.length
+        i--
+      }
     }
   
 
@@ -548,6 +551,10 @@ class Pen {
           prev_ep = this.m_path.m_points[len - 1]
           ep = this.m_path.m_points[0]
           this.bezierCurveTo(prev_ep, ep)
+
+          // Init new path....
+          this.reset(true)
+
       }
 
     }

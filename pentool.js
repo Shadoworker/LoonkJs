@@ -143,9 +143,9 @@ const endpointStyle = {
 
     }
    
-    distanceOfPoint(cp) {
+    distanceOfPoint(_p) {
       return Math.sqrt(
-        Math.pow(this.x - cp.x, 2) + Math.pow(this.y - cp.y, 2)
+        Math.pow(this.x - _p.x, 2) + Math.pow(this.y - _p.y, 2)
       )
     }
   
@@ -208,6 +208,18 @@ class Path{
     }
   }
 
+  getPointSiblingInPath(_x, _y) // Gets the previous nearest point on path
+  {
+
+    for (let i = 0; i < this.m_points.length; i++) {
+      const p = this.m_points[i];
+
+
+      
+    }
+
+  }
+
   insertEndPoint(ed) {
     this.m_points.push(ed)
   }
@@ -256,19 +268,19 @@ class Loonk {
             
       // // Presets
       this.m_drawing = false   
-      // this.m_dragging = false   
-      // this.m_editCpBalance = false  
-      // this.m_isNewEndPoint = false   
-      // this.m_currentSelectedPoint = null   
-      // this.m_draggingControlPoint = null   
-      // this.m_pathStarted = false;
-
+    
     }
 
     initPath()
     {
   
       this.m_drawing = true   
+      this.m_dragging = false   
+      this.m_editCpBalance = false  
+      this.m_isNewEndPoint = false   
+      this.m_currentSelectedPoint = null   
+      this.m_draggingControlPoint = null   
+      this.m_pathStarted = false;
 
       // Define controls container
       ControlPoint.prototype.m_controls = this.m_controls
@@ -382,7 +394,7 @@ class Loonk {
           this.m_draggingControlPoint.y = pos.y
 
           csp.ep.calculateControlPoint(pos.x, pos.y, this.m_draggingControlPoint)
-          
+
       } else if(this.m_currentSelectedPoint){
 
           this.setCursor("arrow")
@@ -449,37 +461,108 @@ class Loonk {
         let pos = this.positionToCanvas(e.clientX, e.clientY)
         let pointToInsert = this.createEndPoint(pos.x, pos.y)
 
-        if(this.m_path.m_isClosed)
+        // Get the path portion and the insertion index
+        var insertIndex = -1;
+        var contactPoint = this.createSVGPoint(pos.x, pos.y)
+        for (let i = 0; i < this.m_path.m_points.length; i++)  // Loop through all portions : -1 to avoid loop
         {
+          // Get current point and next
+          const p = this.m_path.m_points[i];
+          var nextI = (i+1) > (this.m_path.m_points.length-1) ? 0 : (i+1);
+          const nextP = this.m_path.m_points[nextI];
+
+          // Create the portion 
+          var portion = this.createHelperPath(p, nextP)
+          this.m_svg.append(portion)
+          // and check if current mouse pos is in this portion
+          if(portion.isPointInStroke(contactPoint))
+          {
+            insertIndex = nextI;
+
+            this.m_svg.removeChild(portion)
+
+            break;
+          }
+
+          this.m_svg.removeChild(portion)
+
+        }
+ 
+        // Check if drawmode left
+        if(!this.m_drawing)
+        {
+          if(insertIndex != -1) // Not in path
           this.selectPath(e)
           
-          this.m_path.m_points.splice(2, 0, pointToInsert)
+          this.m_path.m_points.splice(insertIndex, 0, pointToInsert)
 
           this.render()
         }
-        // console.log(insertedPoint);
-        // selectedPath.path.insertEndPoint(insertedPoint)
-
-        // this.render()
+ 
 
       }
 
       this.m_currentPath.onmouseover = (e)=>{
 
         e.preventDefault();
-
-        var selectedPath = this.getSelectedPath()
+        e.stopPropagation();
 
         let pos = this.positionToCanvas(e.clientX, e.clientY)
-        let insertedPoint = this.createEndPoint(pos.x, pos.y)
+        // let pointToInsert = this.createEndPoint(pos.x, pos.y)
 
-        // console.log(insertedPoint);
-        // selectedPath.path.insertEndPoint(insertedPoint)
+        // Get the path portion and the insertion index
+        var insertIndex = -1;
+        var contactPoint = this.createSVGPoint(pos.x, pos.y)
+        for (let i = 0; i < this.m_path.m_points.length; i++)  // Loop through all portions : -1 to avoid loop
+        {
+          // Get current point and next
+          const p = this.m_path.m_points[i];
+          var nextI = (i+1) > (this.m_path.m_points.length-1) ? 0 : (i+1);
+          const nextP = this.m_path.m_points[nextI];
 
-        // this.render()
+          // Create the portion 
+          var portion = this.createHelperPath(p, nextP)
+          this.m_svg.append(portion)
+          // and check if current mouse pos is in this portion
+          if(portion.isPointInStroke(contactPoint))
+          {
+            insertIndex = nextI;
+
+            this.m_svg.removeChild(portion)
+
+            break;
+          }
+
+          this.m_svg.removeChild(portion)
+
+        }
 
       }
 
+
+    }
+
+    createSVGPoint(_x, _y)
+    {
+      var p = this.m_svg.createSVGPoint()
+      p.x = _x;
+      p.y = _y;
+      return p
+    }
+    createHelperPath(p1, p2)
+    {
+
+      let path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      // path.classList.add(LOONK_PATH_CLASS);
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", "transparent");
+      path.setAttribute("stroke-width", 1.5);
+
+      var curve = this.createBezier(p1, p2)
+      var d = "M"+p1.x+ ","+p1.y + curve;
+      path.setAttribute("d", d);
+
+      return path;
 
     }
   
@@ -626,12 +709,16 @@ class Loonk {
     bezierCurveTo(prev_ep, ep) {
     
         var d = this.m_currentPath.getAttribute('d');
-        d += 'C'+ prev_ep.cp1.x + "," + prev_ep.cp1.y + " " +
-        ep.cp0.x + "," + ep.cp0.y + " " +
-        ep.x + "," + ep.y;
-
+        d += this.createBezier(prev_ep, ep)
         this.m_currentPath.setAttribute("d", d)
         
+    }
+    createBezier(prev_ep, ep)
+    {
+      return 'C'+ prev_ep.cp1.x + "," + prev_ep.cp1.y + " " +
+      ep.cp0.x + "," + ep.cp0.y + " " +
+      ep.x + "," + ep.y;
+      
     }
   }
   

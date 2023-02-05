@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LoonkJS - SVG</title>
   <style>
+     
     * {
       margin: 0;
       padding: 0;
@@ -17,8 +18,28 @@
     {
       position: relative;
       z-index: 3;
-      background-color: #F4F4F4;
+      background-color: #F2F2F2;
       border: solid 1px gray;
+
+    }
+    .cursor_pen
+    {
+      cursor: url(assets/icons/cursor_pen.png) 0.1 0.1, pointer;
+    }
+    .cursor_arrow
+    {
+      cursor: url(assets/icons/cursor_arrow.png) 0.1 0.1, pointer;
+    }
+    .loonk_scene_path
+    {
+      padding: 2px;
+    }
+    .loonk_scene_path:hover
+    {
+      /* cursor: url(assets/icons/cursor_arrow.png) 10, 10, pointer; */
+      stroke: #da2f7d;
+      stroke-width: 3;
+      transition: all ease-in 0.10s;
     }
     .loonk_controls_box_endpoint:hover
     {

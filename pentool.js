@@ -1,5 +1,7 @@
  
  // Classes
+ const LOONK_PATH_CLASS ='loonk_scene_path';
+ const LOONK_PATH_CLASS_HOVER ='loonk_scene_path_hover';
  const END_POINT_CLASS ='loonk_controls_box_endpoint';
  const CONTROL_POINT_CLASS ='loonk_controls_box_controlpoint';
 // Colors
@@ -177,10 +179,10 @@ const endpointStyle = {
  */
 
 class Path{
-  constructor (isClose = false) {
+  constructor (isClosed = false) {
 
     this.m_points = [];
-    this.isClose = isClose  
+    this.m_isClosed = isClosed  
 
   }
 
@@ -243,20 +245,31 @@ class Loonk {
       this.m_svg.setAttribute("width", this.m_sceneWidth)
       this.m_svg.setAttribute("height",  this.m_sceneHeight)
       
+
+
       this.active()
+
+    }
+
+    resetPath()
+    {
+            
+      // // Presets
+      this.m_drawing = false   
+      // this.m_dragging = false   
+      // this.m_editCpBalance = false  
+      // this.m_isNewEndPoint = false   
+      // this.m_currentSelectedPoint = null   
+      // this.m_draggingControlPoint = null   
+      // this.m_pathStarted = false;
 
     }
 
     initPath()
     {
-      
-      this.dragging = false  //  
-      this.editCpBalance = false //  
-      this.isNewEndPoint = false  //  
-      this.currentSelectedPoint = null  //  
-      this.draggingControlPoint = null  //  
-      this.pathStarted = false;
   
+      this.m_drawing = true   
+
       // Define controls container
       ControlPoint.prototype.m_controls = this.m_controls
       EndPoint.prototype.m_controls = this.m_controls
@@ -267,10 +280,18 @@ class Loonk {
       this.m_currentPath = this.createPathElement();
       this.m_pathElements.push(this.m_currentPath)
 
+      // Init path inner point insertion
       this.observePath();
 
     }
-  
+
+    // select a path and (re)activate it
+    selectPath(e)
+    {
+      var target = e.target;
+      this.m_path = target.m_path; // Set new path to this element m_path property
+    }
+ 
     // the positoin on canvas
     positionToCanvas (x, y) {
       let bbox = this.m_svg.getBoundingClientRect()
@@ -282,86 +303,97 @@ class Loonk {
     // mouse click
     onMouseDown(e) {
   
-      let location = this.positionToCanvas(e.clientX, e.clientY)
+
+      let pos = this.positionToCanvas(e.clientX, e.clientY)
       let selectedPath = this.getSelectedPath()
   
-      this.dragging = true
-      this.isNewEndPoint = false
-      this.draggingControlPoint = false
-      this.currentSelectedPoint = this.getPoint(e);
+      this.m_dragging = true
+      this.m_isNewEndPoint = false
+      this.m_draggingControlPoint = false
+      this.m_currentSelectedPoint = this.getPoint(e);
       
       
-      if(!this.isControlPoint(this.currentSelectedPoint))
-        this.updateSelectedEndPoint(this.currentSelectedPoint)
+      if(!this.isControlPoint(this.m_currentSelectedPoint))
+        this.updateSelectedEndPoint(this.m_currentSelectedPoint)
       
 
 
-      if(this.currentSelectedPoint ){
+      if(this.m_currentSelectedPoint ){
         // if the endPoint exist
-        this.currentSelectedPoint.selected = true;
+        this.m_currentSelectedPoint.selected = true;
   
-        if(this.editCpBalance && !this.draggingControlPoint) {
-          let cep = this.currentSelectedPoint
+        if(this.m_editCpBalance && !this.m_draggingControlPoint) {
+          let cep = this.m_currentSelectedPoint
           cep.cpBalance = true
           cep.cp0.x = cep.cp1.x = cep.x
           cep.cp0.y = cep.cp1.y = cep.y
-          this.isNewEndPoint = true
+          this.m_isNewEndPoint = true
         }
   
-        if(!this.draggingControlPoint && this.currentSelectedPoint === this.m_path.m_points[0] && this.m_path.m_points.length > 2){
+        if(!this.m_draggingControlPoint && this.m_currentSelectedPoint === this.m_path.m_points[0] && this.m_path.m_points.length > 2){
             // click first endpoint
             // close path
-            this.createPath()
+            this.closePath()
         }
       } else {
-         this.currentSelectedPoint = this.createEndPoint(location.x, location.y)
-         this.isNewEndPoint = true;
 
-         if(this.editCpBalance && selectedPath){
-            // add endpoint to selectedendpoint after
-           selectedPath.path.addEndPoint(selectedPath.ep, this.currentSelectedPoint)
-        }else {
-          this.m_path.m_points.push(this.currentSelectedPoint)
-        }
+          if(!this.m_drawing) return;
+
+          this.m_currentSelectedPoint = this.createEndPoint(pos.x, pos.y)
+          this.m_isNewEndPoint = true;
+
+          if(this.m_editCpBalance && selectedPath){
+              // add endpoint to selectedendpoint after
+            selectedPath.path.addEndPoint(selectedPath.ep, this.m_currentSelectedPoint)
+          }else {
+            this.m_path.m_points.push(this.m_currentSelectedPoint)
+          }
       }
-      this.renderer()
+      this.render()
     }
   
     onMouseMove(e) {
       e.preventDefault()
-  
-      if(!this.dragging) {
+
+      if(!this.m_path.isClosed)
+        this.setCursor("pen")
+
+
+      if(!this.m_dragging) {
         return
       }
-      let loc = this.positionToCanvas(e.clientX, e.clientY)
-      let csp = this.currentSelectedPoint // current selected point
+
+      let pos = this.positionToCanvas(e.clientX, e.clientY)
+      let csp = this.m_currentSelectedPoint // current selected point
+
+      if(this.m_isNewEndPoint){
+          csp.cp1.x = pos.x
+          csp.cp1.y = pos.y
   
-      this.m_svg.style.cursor = 'move'
-  
-      if(this.isNewEndPoint){
-          csp.cp1.x = loc.x
-          csp.cp1.y = loc.y
-  
-          csp.cp0.x = csp.x * 2 - loc.x
-          csp.cp0.y = csp.y * 2 - loc.y
-      } else if (this.draggingControlPoint){
+          csp.cp0.x = csp.x * 2 - pos.x
+          csp.cp0.y = csp.y * 2 - pos.y
+      } else if (this.m_draggingControlPoint){
           // Dragging controlPoint
 
-          if(this.editCpBalance){
+          if(this.m_editCpBalance){
               csp.cpBalance = false
           }
-          this.draggingControlPoint.x = loc.x
-          this.draggingControlPoint.y = loc.y
+          this.m_draggingControlPoint.x = pos.x
+          this.m_draggingControlPoint.y = pos.y
 
-          csp.ep.calculateControlPoint(loc.x, loc.y, this.draggingControlPoint)
-      } else {
+          csp.ep.calculateControlPoint(pos.x, pos.y, this.m_draggingControlPoint)
+          
+      } else if(this.m_currentSelectedPoint){
+
+          this.setCursor("arrow")
+
           // Dragging endpoint
           let offset = {
-            x: loc.x - csp.x,
-            y: loc.y-csp.y
+            x: pos.x - csp.x,
+            y: pos.y-csp.y
           }
-          csp.x = loc.x
-          csp.y = loc.y
+          csp.x = pos.x
+          csp.y = pos.y
   
           csp.cp1.x += offset.x
           csp.cp1.y += offset.y
@@ -369,17 +401,17 @@ class Loonk {
           csp.cp0.y += offset.y
 
       }
-      this.renderer()
+      this.render()
     }
-    onMouseUp(e) {
-      this.m_svg.style.cursor = 'default'
-      this.dragging = false
-      if(this.draggingControlPoint){
-        if(this.draggingControlPoint.opposite) {
-          delete this.draggingControlPoint.opposite.staticDistance
+    onMouseUp(e) { 
+
+      this.m_dragging = false
+      if(this.m_draggingControlPoint){
+        if(this.m_draggingControlPoint.opposite) {
+          delete this.m_draggingControlPoint.opposite.staticDistance
         }
-        delete this.draggingControlPoint.opposite
-        this.draggingControlPoint = false
+        delete this.m_draggingControlPoint.opposite
+        this.m_draggingControlPoint = false
       }
     }
   
@@ -389,7 +421,7 @@ class Loonk {
         case "Delete": 
           e.preventDefault()
           this.deleteEndPoint()
-          this.renderer()
+          this.render()
       }
     }
     // active the canvas's eventListner
@@ -409,44 +441,79 @@ class Loonk {
   
     observePath()
     {
+
+      this.m_currentPath.onmousedown = (e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+
+        let pos = this.positionToCanvas(e.clientX, e.clientY)
+        let pointToInsert = this.createEndPoint(pos.x, pos.y)
+
+        if(this.m_path.m_isClosed)
+        {
+          this.selectPath(e)
+          
+          this.m_path.m_points.splice(2, 0, pointToInsert)
+
+          this.render()
+        }
+        // console.log(insertedPoint);
+        // selectedPath.path.insertEndPoint(insertedPoint)
+
+        // this.render()
+
+      }
+
       this.m_currentPath.onmouseover = (e)=>{
+
+        e.preventDefault();
 
         var selectedPath = this.getSelectedPath()
 
-        e.preventDefault();
         let pos = this.positionToCanvas(e.clientX, e.clientY)
-        
         let insertedPoint = this.createEndPoint(pos.x, pos.y)
 
         // console.log(insertedPoint);
-
         // selectedPath.path.insertEndPoint(insertedPoint)
 
-        // this.renderer()
-
+        // this.render()
 
       }
+
+
     }
   
-    createPath() {
+    closePath() {
 
       // Close current Path
-      this.m_path.isClose = true // Close previous path
-      // this.renderer()
+      this.m_path.m_isClosed = true // Close previous path
+      this.resetPath();
 
-      // Init new Path : 
-      // this.reset()
-      // this.m_paths = [];
-      // this.m_path.m_points.push() // Add new one
+
+
+      this.setCursor("arrow")
+
+    }
+
+    setCursor(_cursor)
+    {
+      var toremove = _cursor == "arrow" ? "cursor_pen" : "cursor_arrow";
+      this.m_svg.classList.remove(toremove)
+      this.m_svg.classList.add("cursor_"+_cursor)
+
     }
 
     createPathElement()
     {
       let path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute("id", "loonk_scene_path_"+this.m_pathElements.length);
+      path.setAttribute("id", LOONK_PATH_CLASS+"_"+this.m_pathElements.length);
+      path.classList.add(LOONK_PATH_CLASS);
       path.setAttribute("fill", "none");
       path.setAttribute("stroke", "black");
       path.setAttribute("stroke-width", 1.5);
+
+      
+      path.m_path = this.m_path; // set path ref
       this.m_svg.prepend(path)
       this.m_currentPath = path
       return path;
@@ -499,12 +566,8 @@ class Loonk {
     // delete point
     deleteEndPoint() {
 
-      this.m_path[i].deleteSelected()
-      if(this.m_path[i].length === 0 && (i + 1 !== l)){
-        this.m_path.splice(i, 1)
-        l = this.m_path.length
-        i--
-      }
+      this.m_path.deleteSelected()
+       
     }
   
 
@@ -518,18 +581,18 @@ class Loonk {
       else if(_el.classList.contains(CONTROL_POINT_CLASS))
       {
         var p = _el._point;
-        this.draggingControlPoint = p;
+        this.m_draggingControlPoint = p;
         return p;
       }
       return null;
     }
 
-    // renderer the spline
-    renderer() {
+    // render the spline
+    render() {
       let ep, prev_ep
   
       this.m_currentPath.setAttribute("d", "")
-      this.pathStarted = false;
+      this.m_pathStarted = false;
       this.m_svg.querySelector('.loonk_controls_box').innerHTML = null;
 
       
@@ -537,10 +600,10 @@ class Loonk {
       for(let i = 0; i < len; i++) {
         ep = this.m_path.m_points[i]
         ep.printControlPoints()
-        if(!this.pathStarted)
+        if(!this.m_pathStarted)
         {
             this.m_currentPath.setAttribute("d", "M"+ep.x + "," + ep.y)
-            this.pathStarted = true
+            this.m_pathStarted = true
         }
         if(i > 0) {
           // draw line
@@ -548,13 +611,13 @@ class Loonk {
           this.bezierCurveTo(prev_ep, ep)
         }
       }
-      if(this.m_path.isClose){
+      if(this.m_path.m_isClosed){
           prev_ep = this.m_path.m_points[len - 1]
           ep = this.m_path.m_points[0]
           this.bezierCurveTo(prev_ep, ep)
 
           // Init new path....
-          this.initPath()
+          // this.initPath()
 
       }
 

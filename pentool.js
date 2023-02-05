@@ -179,35 +179,37 @@ const endpointStyle = {
 class Path{
   constructor (isClose = false) {
 
+    this.m_points = [];
     this.isClose = isClose  
 
   }
 
-  updateSelectedEndPoint() {
-    this.forEach((ep) => {
+  updateSelectedEndPoint(ep) {
       ep.selected = false
-    })
   }
 
   deleteSelected() {
-    for(let i = 0, len = this.length; i < len; i++){
-      if(this[i].selected){
-        this.splice(i, 1)
-        len = this.length
+    for(let i = 0, len = this.m_points.length; i < len; i++){
+      if(this.m_points[i].selected){
+        this.m_points.splice(i, 1)
+        len = this.m_points.length
         i--
       }
     }
   }
 
   addEndPoint(oed, ed) {
-    for(let i = 0, len = this.length; i < len; i++){
-      if(this[i] === oed){
-          this.splice(i + 1, 0, ed);
+    for(let i = 0, len = this.m_points.length; i < len; i++){
+      if(this.m_points[i] === oed){
+          this.m_points.splice(i + 1, 0, ed);
       }
     }
   }
+
+  insertEndPoint(ed) {
+    this.m_points.push(ed)
+  }
 }
-Object.setPrototypeOf(Path.prototype, Array.prototype);
 
 /** PATH END */
 
@@ -229,12 +231,15 @@ class Pen {
     
     this.m_svg = document.querySelector(_sceneRef)
     this.m_controls = this.createControlsContainer();
-    this.currentPath = document.querySelector("#scene_path_0")
-    this.stroke_color = '#ffc107' //  
-    }
+
+    this.m_pathElements = [];
+
+  }
     reset () {
-      this.paths = []
-      this.paths.push(new Path())
+  
+      this.m_path = new Path();
+      this.m_paths = []
+      this.m_paths.push(this.m_path)
       this.dragging = false  //  
       this.editCpBalance = false //  
       this.isNewEndPoint = false  //  
@@ -242,6 +247,8 @@ class Pen {
       this.draggingControlPoint = null  //  
       this.pathStarted = false;
   
+      this.m_currentPath = this.createPathElement();
+      this.m_pathElements.push(this.m_currentPath)
       // Define controls container
       ControlPoint.prototype.m_controls = this.m_controls
       EndPoint.prototype.m_controls = this.m_controls
@@ -250,7 +257,11 @@ class Pen {
       this.m_svg.setAttribute("width", this.m_sceneWidth)
       this.m_svg.setAttribute("height",  this.m_sceneHeight)
       
+      this.m_pathElements.push(this.m_currentPath);
+
       this.active()
+
+      this.observePath();
 
     }
   
@@ -271,12 +282,11 @@ class Pen {
       this.dragging = true
       this.isNewEndPoint = false
       this.draggingControlPoint = false
-      // this.currentSelectedPoint = this.isExistPoint(location.x, location.y)
       this.currentSelectedPoint = this.getPoint(e);
       
       
       if(!this.isControlPoint(this.currentSelectedPoint))
-        this.updateSelectedEndPointEndPoint()
+        this.updateSelectedEndPoint(this.currentSelectedPoint)
       
 
 
@@ -292,7 +302,7 @@ class Pen {
           this.isNewEndPoint = true
         }
   
-        if(!this.draggingControlPoint && this.currentSelectedPoint === this.paths[this.paths.length -1][0] && this.paths[this.paths.length -1].length > 2){
+        if(!this.draggingControlPoint && this.currentSelectedPoint === this.m_path.m_points[0] && this.m_path.m_points.length > 2){
             // click first endpoint
             // close path
             this.createPath()
@@ -300,11 +310,12 @@ class Pen {
       } else {
          this.currentSelectedPoint = this.createEndPoint(location.x, location.y)
          this.isNewEndPoint = true;
+
          if(this.editCpBalance && selectedPath){
             // add endpoint to selectedendpoint after
            selectedPath.path.addEndPoint(selectedPath.ep, this.currentSelectedPoint)
         }else {
-          this.paths[this.paths.length - 1].push(this.currentSelectedPoint)
+          this.m_path.m_points.push(this.currentSelectedPoint)
         }
       }
       this.renderer()
@@ -390,10 +401,49 @@ class Pen {
       document.addEventListener('keydown', listeners.keydown, false)
     }
   
+    observePath()
+    {
+      this.m_currentPath.onmouseover = (e)=>{
+
+        var selectedPath = this.getSelectedPath()
+
+        e.preventDefault();
+        let pos = this.positionToCanvas(e.clientX, e.clientY)
+        
+        let insertedPoint = this.createEndPoint(pos.x, pos.y)
+
+        // console.log(insertedPoint);
+
+        // selectedPath.path.insertEndPoint(insertedPoint)
+
+        // this.renderer()
+
+
+      }
+    }
   
     createPath() {
-      this.paths[this.paths.length - 1].isClose = true // Close previous path
-      this.paths.push(new Path()) // Add new one
+
+      // Close current Path
+      this.m_path.isClose = true // Close previous path
+      this.renderer()
+
+      // Init new Path : 
+      this.reset()
+      // this.m_paths = [];
+      // this.m_path.m_points.push() // Add new one
+    }
+
+    createPathElement()
+    {
+      let path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute("id", "loonk_scene_path_"+this.m_pathElements.length);
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", "black");
+      path.setAttribute("stroke-width", 1.5);
+      this.m_svg.prepend(path)
+      this.m_currentPath = path
+      return path;
     }
 
     createControlsContainer()
@@ -406,17 +456,16 @@ class Pen {
     }
   
     getSelectedPath() {
-      for(let i = 0, len1 = this.paths.length; i < len1; i++){
-        for(let j = 0, len2 = this.paths[i].length; j < len2; j++){
-          if(this.paths[i][j].selected){
+        
+      for(let i = 0, len = this.m_path.length; i < len; i++){
+          if(this.m_path.m_points[i].selected){
              var selectedPath = {
-              path: this.paths[i],
-              ep: this.paths[i][j]
+              path: this.m_path,
+              ep: this.m_path.m_points[i]
             }
             return selectedPath;
           }
         }
-      }
       return null
     }
   
@@ -429,9 +478,9 @@ class Pen {
       return false;
     }
 
-    updateSelectedEndPointEndPoint() {
-      this.paths.forEach((path) => {
-          path.updateSelectedEndPoint()
+    updateSelectedEndPoint() {
+      this.m_path.m_points.forEach((ep) => {
+        this.m_path.updateSelectedEndPoint(ep)
       })
     }
   
@@ -443,15 +492,15 @@ class Pen {
   
     // delete point
     deleteEndPoint() {
-      let paths = this.paths
-      for(let i = 0, l = paths.length; i < l; i++){
-        paths[i].deleteSelected()
-        if(paths[i].length === 0 && (i + 1 !== l)){
-          paths.splice(i, 1)
-          l = paths.length
+      let path = this.m_path
+      // for(let i = 0, l = path.length; i < l; i++){
+        path[i].deleteSelected()
+        if(path[i].length === 0 && (i + 1 !== l)){
+          path.splice(i, 1)
+          l = path.length
           i--
         }
-      }
+      // }
     }
   
 
@@ -473,45 +522,44 @@ class Pen {
 
     // renderer the spline
     renderer() {
-      let ep, prev_ep, ctx = this.ctx
+      let ep, prev_ep
   
-      this.currentPath.setAttribute("d", "")
+      this.m_currentPath.setAttribute("d", "")
       this.pathStarted = false;
       this.m_svg.querySelector('.loonk_controls_box').innerHTML = null;
 
-     
-      this.paths.forEach((path) => {
-        let len = path.length
-        for(let i = 0; i < len; i++) {
-          ep = path[i]
-          ep.printControlPoints()
-          if(!this.pathStarted)
-          {
-              this.currentPath.setAttribute("d", "M"+ep.x + "," + ep.y)
-              this.pathStarted = true
-          }
-          if(i > 0) {
-            // draw line
-            prev_ep = path[i - 1];
-            this.bezierCurveTo(prev_ep, ep, ctx)
-          }
+      
+      let len = this.m_path.m_points.length
+      for(let i = 0; i < len; i++) {
+        ep = this.m_path.m_points[i]
+        ep.printControlPoints()
+        if(!this.pathStarted)
+        {
+            this.m_currentPath.setAttribute("d", "M"+ep.x + "," + ep.y)
+            this.pathStarted = true
         }
-        if(path.isClose){
-            prev_ep = path[len - 1]
-            ep = path[0]
-            this.bezierCurveTo(prev_ep, ep, ctx)
+        if(i > 0) {
+          // draw line
+          prev_ep = this.m_path.m_points[i - 1];
+          this.bezierCurveTo(prev_ep, ep)
         }
-      })
+      }
+      if(this.m_path.isClose){
+          prev_ep = this.m_path.m_points[len - 1]
+          ep = this.m_path.m_points[0]
+          this.bezierCurveTo(prev_ep, ep)
+      }
+
     }
   
-    bezierCurveTo(prev_ep, ep, ctx) {
+    bezierCurveTo(prev_ep, ep) {
     
-        var d = this.currentPath.getAttribute('d');
+        var d = this.m_currentPath.getAttribute('d');
         d += 'C'+ prev_ep.cp1.x + "," + prev_ep.cp1.y + " " +
         ep.cp0.x + "," + ep.cp0.y + " " +
         ep.x + "," + ep.y;
 
-        this.currentPath.setAttribute("d", d)
+        this.m_currentPath.setAttribute("d", d)
         
     }
   }

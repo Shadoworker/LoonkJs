@@ -223,7 +223,7 @@ class Path{
 const SCENE_WIDTH = 800;
 const SCENE_HEIGHT = 600;
 
-class Pen {
+class Loonk {
     constructor (_sceneRef = '#scene', _width = SCENE_WIDTH, _height = SCENE_HEIGHT) {
     
     this.m_sceneWidth = _width;
@@ -234,15 +234,22 @@ class Pen {
 
     this.m_pathElements = [];
 
+    this.m_paths = [];
     this.m_path = null;
 
   }
-    reset (_enabled = false) {
+    start () {
   
-      this.m_path = null;
-      this.m_path = new Path();
-      this.m_paths = []
-      this.m_paths.push(this.m_path)
+      this.m_svg.setAttribute("width", this.m_sceneWidth)
+      this.m_svg.setAttribute("height",  this.m_sceneHeight)
+      
+      this.active()
+
+    }
+
+    initPath()
+    {
+      
       this.dragging = false  //  
       this.editCpBalance = false //  
       this.isNewEndPoint = false  //  
@@ -250,19 +257,16 @@ class Pen {
       this.draggingControlPoint = null  //  
       this.pathStarted = false;
   
-      this.m_currentPath = this.createPathElement();
-      this.m_pathElements.push(this.m_currentPath)
       // Define controls container
       ControlPoint.prototype.m_controls = this.m_controls
       EndPoint.prototype.m_controls = this.m_controls
       
+      this.m_path = new Path();
+      this.m_paths.push(this.m_path)
       
-      this.m_svg.setAttribute("width", this.m_sceneWidth)
-      this.m_svg.setAttribute("height",  this.m_sceneHeight)
-      
-      if(_enabled) return // avoiding to activate handlers multiple times
-        
-      this.active()
+      this.m_currentPath = this.createPathElement();
+      this.m_pathElements.push(this.m_currentPath)
+
       this.observePath();
 
     }
@@ -278,7 +282,6 @@ class Pen {
     // mouse click
     onMouseDown(e) {
   
-      console.log("down");
       let location = this.positionToCanvas(e.clientX, e.clientY)
       let selectedPath = this.getSelectedPath()
   
@@ -305,11 +308,9 @@ class Pen {
           this.isNewEndPoint = true
         }
   
-        console.log([this.draggingControlPoint, this.currentSelectedPoint, this.m_path.m_points[0], this.m_path.m_points.length])
         if(!this.draggingControlPoint && this.currentSelectedPoint === this.m_path.m_points[0] && this.m_path.m_points.length > 2){
             // click first endpoint
             // close path
-            console.log("closeFall")
             this.createPath()
         }
       } else {
@@ -553,7 +554,7 @@ class Pen {
           this.bezierCurveTo(prev_ep, ep)
 
           // Init new path....
-          this.reset(true)
+          this.initPath()
 
       }
 
@@ -582,9 +583,10 @@ class Pen {
 
 window.addEventListener('load',()=>{
 
-    // Use class Pen here 
-    let pen = new Pen('#scene')
-    pen.reset()
+    // Use class Loonk here 
+    let loonk = new Loonk('#scene')
+    loonk.start()
+    loonk.initPath();
 
 }, false);
  

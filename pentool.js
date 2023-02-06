@@ -1,15 +1,20 @@
  
- // Classes
- const LOONK_PATH_CLASS ='loonk_scene_path';
- const LOONK_PATH_HELPER_CLASS ='loonk_scene_path_helper';
- const LOONK_POINT_HELPER_CLASS ='loonk_scene_point_helper';
- const LOONK_PATH_CLASS_HOVER ='loonk_scene_path_hover';
- const END_POINT_CLASS ='loonk_controls_box_endpoint';
- const CONTROL_POINT_CLASS ='loonk_controls_box_controlpoint';
-// Colors
- const POINT_COLOR = "#DA2F74";
- const POINT_BORDER_COLOR = "#FFFFFF";
- const LINE_COLOR = "#E193B2";
+  // Classes
+  const LOONK_PATH_CLASS ='loonk_scene_path';
+  const LOONK_PATH_HELPER_CLASS ='loonk_scene_path_helper';
+  const LOONK_POINT_HELPER_CLASS ='loonk_scene_point_helper';
+  const LOONK_PATH_CLASS_HOVER ='loonk_scene_path_hover';
+  const END_POINT_CLASS ='loonk_controls_box_endpoint';
+  const CONTROL_POINT_CLASS ='loonk_controls_box_controlpoint';
+  // Colors
+  const POINT_COLOR = "#DA2F74";
+  const POINT_BORDER_COLOR = "#FFFFFF";
+  const LINE_COLOR = "#E193B2";
+
+  // Presets 
+  const SCENE_WIDTH = 800;
+  const SCENE_HEIGHT = 600;
+  const MIN_HOVER_DIST = 40;
 /**
  * CONTROL POINT
  * 
@@ -232,12 +237,10 @@ class Path{
  
 /**
  *  
- * PEN
+ * LOONK
  * 
  */
 
-const SCENE_WIDTH = 800;
-const SCENE_HEIGHT = 600;
 
 class Loonk {
     constructor (_sceneRef = '#scene', _width = SCENE_WIDTH, _height = SCENE_HEIGHT) {
@@ -271,6 +274,7 @@ class Loonk {
       // // Presets
       this.m_drawing = false   
     
+
     }
 
     initPath()
@@ -284,6 +288,7 @@ class Loonk {
       this.m_draggingControlPoint = null   
       this.m_pathStarted = false;
       this.m_portion = false;
+      this.m_currentHoverPoint = null;
 
       // Define controls container
       ControlPoint.prototype.m_controls = this.m_controls
@@ -293,6 +298,7 @@ class Loonk {
       this.m_paths.push(this.m_path)
       
       this.m_currentPath = this.createPathElement();
+      this.m_currentPath._hoverHelper = null;
       this.m_pathElements.push(this.m_currentPath)
 
       // Init path inner point insertion
@@ -370,17 +376,22 @@ class Loonk {
     onMouseMove(e) {
       e.preventDefault()
 
-      if(!this.m_path.isClosed)
+      let pos = this.positionToCanvas(e.clientX, e.clientY)
+      let csp = this.m_currentSelectedPoint // current selected point
+
+      if(!this.m_path.m_isClosed)
         this.setCursor("pen")
 
+
+      if(this.m_path.m_isClosed)
+      {
+        this.hoverAtDist(pos.x, pos.y)
+      }
 
       if(!this.m_dragging) {
         return
       }
-
-      let pos = this.positionToCanvas(e.clientX, e.clientY)
-      let csp = this.m_currentSelectedPoint // current selected point
-
+  
       if(this.m_isNewEndPoint){
           csp.cp1.x = pos.x
           csp.cp1.y = pos.y
@@ -482,25 +493,25 @@ class Loonk {
       }
 
       // Mouse enter on path
-      this.m_currentPath.onmouseover = (e)=>{
+      // this.m_currentPath.onmouseover = (e)=>{
 
-        e.preventDefault(); e.stopPropagation();
+      //   e.preventDefault(); e.stopPropagation();
 
-        let pos = this.positionToCanvas(e.clientX, e.clientY)
+      //   let pos = this.positionToCanvas(e.clientX, e.clientY)
        
-        this.getInsertionIndex(pos, true);
+      //   this.getInsertionIndex(pos, true);
 
-      }
-      // Mouse leave path
+      // }
+      // // Mouse leave path
       this.m_currentPath.onmouseleave = (e)=>{
 
         e.preventDefault(); e.stopPropagation();
 
         // Remove pathHelpers : Higlighters
-        var pathHelpers = this.m_svg.querySelectorAll("."+ LOONK_PATH_HELPER_CLASS)
-        pathHelpers.forEach(el => {
-          this.m_svg.removeChild(el);
-        });
+        // var pathHelpers = this.m_svg.querySelectorAll("."+ LOONK_PATH_HELPER_CLASS)
+        // pathHelpers.forEach(el => {
+        //   this.m_svg.removeChild(el);
+        // });
 
         // Remove pointHelper
         var pointHelper = this.m_svg.querySelector("."+LOONK_POINT_HELPER_CLASS);
@@ -509,6 +520,15 @@ class Loonk {
 
       }
 
+      
+
+     
+
+    }
+
+    distanceOfPoint(x1, y1, x2, y2) {
+     
+      return Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 
     }
 
@@ -553,6 +573,28 @@ class Loonk {
  
       return insertIndex;
 
+    }
+
+    hoverAtDist(x,y) // Helps to hover the path at a defined distance in order to make thin stroke easier to be hovered
+    {
+          
+      let minDist = MIN_HOVER_DIST;
+      const length = this.m_currentPath.getTotalLength();
+      var closestPointIndex = -1;
+      for (let i = 0; i < length; i++) {
+        const point = this.m_currentPath.getPointAtLength(i);
+        const dist = (x - point.x) ** 2 + (y - point.y) ** 2;
+        if (dist < minDist) {
+          minDist = dist;
+          closestPointIndex = i;
+          this.createHelperPoint(point.x, point.y);
+        }
+      }
+
+      if(closestPointIndex == -1)
+      {
+        this.removeHelperPoint();
+      }
     }
 
     createSVGPoint(_x, _y)
@@ -603,6 +645,15 @@ class Loonk {
       this.m_controls.append(point);
 
     }
+
+    removeHelperPoint()
+    {
+      // Remove pointHelper
+      var pointHelper = this.m_svg.querySelector("."+LOONK_POINT_HELPER_CLASS);
+      if(pointHelper)
+        this.m_controls.removeChild(pointHelper);
+
+    }
   
     closePath() {
 
@@ -611,9 +662,41 @@ class Loonk {
       this.resetPath();
 
 
-
       this.setCursor("arrow")
 
+      // setTimeout(() => {
+
+      //   var helper = this.m_currentPath.cloneNode();
+      //   helper.setAttribute("id", null);
+      //   helper.setAttribute("stroke-width", 10);
+      //   helper.setAttribute("stroke", "red");
+      //   helper.setAttribute("stroke-opacity", 0.1);
+     
+      //   setTimeout(() => {
+      //   this.scalePath(helper)
+      //   }, 300);
+        
+      //   this.m_svg.appendChild(helper);
+      //   this.m_currentPath._hoverHelper = helper;
+       
+
+      // }, 50);
+
+
+
+    }
+
+    scalePath(path)
+    {
+      const rect = path.getBoundingClientRect();
+
+      const cx = rect.left + rect.width/2;
+      const cy = rect.top + rect.height/2;
+      
+      const sx = 2;  // scale factor for x axis
+      const sy = 2;  // scale factor for y axis
+      
+      path.style.transform = `translate(${cx}px,${cy}px) scale(${sx},${sy}) translate(${-cx}px,${-cy}px)`;
     }
 
     setCursor(_cursor)
@@ -739,6 +822,7 @@ class Loonk {
 
           // Init new path....
           // this.initPath()
+     
 
       }
 
@@ -749,6 +833,8 @@ class Loonk {
         var d = this.m_currentPath.getAttribute('d');
         d += this.createBezier(prev_ep, ep)
         this.m_currentPath.setAttribute("d", d)
+
+        
         
     }
     createBezier(prev_ep, ep)

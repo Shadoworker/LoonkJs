@@ -302,9 +302,6 @@ class Loonk {
       this.m_currentPath._hoverHelper = null;
       this.m_pathElements.push(this.m_currentPath)
 
-      // Init path inner point insertion
-      this.observePath();
-
     }
 
     // select a path and (re)activate it
@@ -334,6 +331,12 @@ class Loonk {
       this.m_draggingControlPoint = false
       this.m_currentSelectedPoint = this.getPoint(e);
       
+      if(!this.m_drawing && this.m_newPointInsertIndex != -1)
+      {
+        this.insertEndPointToPath(this.m_currentHoverPoint.x, this.m_currentHoverPoint.y)
+        console.log("INSERTED")
+      }
+
       
       if(!this.isControlPoint(this.m_currentSelectedPoint))
         this.updateSelectedEndPoint(this.m_currentSelectedPoint)
@@ -466,68 +469,26 @@ class Loonk {
       document.addEventListener('keydown', listeners.keydown, false)
     }
   
-    observePath()
+    distanceOfPoint(x1, y1, x2, y2) {
+      return Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+    }
+    
+    // Insert a new endpoint at the hovered position in current path
+    insertEndPointToPath(_x, _y)
     {
 
-      // Mouse down
-      this.m_currentPath.onmousedown = (e)=>{
-        e.preventDefault(); e.stopPropagation();
+      var pointToInsert = this.createEndPoint(_x, _y)
 
-        // Check if drawmode left
-        if(!this.m_drawing)
-        {
-          if(this.m_newPointInsertIndex != -1) // Not in path
-          this.selectPath(e)
-         
-          this.m_path.m_points.splice(this.m_newPointInsertIndex, 0, this.m_currentHoverPoint)
-
-          this.render()
-        }
- 
-
-      }
-
-      // Mouse enter on path
-      // this.m_currentPath.onmouseover = (e)=>{
-
-      //   e.preventDefault(); e.stopPropagation();
-
-      //   let pos = this.positionToCanvas(e.clientX, e.clientY)
-       
-      //   this.setHoverPortion(pos, true);
-
-      // }
-      // // Mouse leave path
-      this.m_currentPath.onmouseleave = (e)=>{
-
-        e.preventDefault(); e.stopPropagation();
-
-        // Remove pathHelpers : Higlighters
-        // var pathHelpers = this.m_svg.querySelectorAll("."+ LOONK_PATH_HELPER_CLASS)
-        // pathHelpers.forEach(el => {
-        //   this.m_svg.removeChild(el);
-        // });
-
-        // Remove pointHelper
-        // var pointHelper = this.m_svg.querySelector("."+LOONK_POINT_HELPER_CLASS);
-        // if(pointHelper)
-        //   this.m_controls.removeChild(pointHelper);
-
-      }
-
-      
-
+      if(this.m_newPointInsertIndex != -1) // Not in path
+      // this.selectPath(e)
      
+      this.m_path.m_points.splice(this.m_newPointInsertIndex, 0, pointToInsert)
 
+      this.render()
     }
-
-    distanceOfPoint(x1, y1, x2, y2) {
-     
-      return Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-
-    }
- 
-    hoverAtDist(x,y) // Helps to hover the path at a defined distance in order to make thin stroke easier to be hovered
+    
+    // Helps to hover the path at a defined distance in order to make thin stroke easier to be hovered
+    hoverAtDist(x,y) 
     {
           
       let minDist = MIN_HOVER_DIST;
@@ -666,6 +627,9 @@ class Loonk {
     createHelperPoint(_x, _y)
     {
 
+      // Create future endpoint to be added
+      this.m_currentHoverPoint = this.createEndPoint(_x, _y) // NOTE : After the if bloc => was causing bug on new point position
+
       if(this.m_svg.querySelector("."+LOONK_POINT_HELPER_CLASS))
       {
         var p = this.m_svg.querySelector("."+LOONK_POINT_HELPER_CLASS);
@@ -687,8 +651,7 @@ class Loonk {
 
       this.m_controls.append(point);
 
-      // Create future endpoint to be added
-      this.m_currentHoverPoint = this.createEndPoint(_x, _y)
+   
 
     }
 

@@ -289,6 +289,7 @@ class Loonk {
       this.m_pathStarted = false;
       this.m_portion = false;
       this.m_currentHoverPoint = null;
+      this.m_newPointInsertIndex = -1;
 
       // Define controls container
       ControlPoint.prototype.m_controls = this.m_controls
@@ -472,19 +473,13 @@ class Loonk {
       this.m_currentPath.onmousedown = (e)=>{
         e.preventDefault(); e.stopPropagation();
 
-        let pos = this.positionToCanvas(e.clientX, e.clientY)
-        let pointToInsert = this.createEndPoint(pos.x, pos.y)
- 
-        // Get the path portion and the insertion index
-        var insertIndex = this.getInsertionIndex(pos);
-  
         // Check if drawmode left
         if(!this.m_drawing)
         {
-          if(insertIndex != -1) // Not in path
+          if(this.m_newPointInsertIndex != -1) // Not in path
           this.selectPath(e)
          
-          this.m_path.m_points.splice(insertIndex, 0, pointToInsert)
+          this.m_path.m_points.splice(this.m_newPointInsertIndex, 0, this.m_currentHoverPoint)
 
           this.render()
         }
@@ -499,7 +494,7 @@ class Loonk {
 
       //   let pos = this.positionToCanvas(e.clientX, e.clientY)
        
-      //   this.getInsertionIndex(pos, true);
+      //   this.setHoverPortion(pos, true);
 
       // }
       // // Mouse leave path
@@ -514,9 +509,9 @@ class Loonk {
         // });
 
         // Remove pointHelper
-        var pointHelper = this.m_svg.querySelector("."+LOONK_POINT_HELPER_CLASS);
-        if(pointHelper)
-          this.m_controls.removeChild(pointHelper);
+        // var pointHelper = this.m_svg.querySelector("."+LOONK_POINT_HELPER_CLASS);
+        // if(pointHelper)
+        //   this.m_controls.removeChild(pointHelper);
 
       }
 
@@ -530,6 +525,31 @@ class Loonk {
      
       return Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 
+    }
+ 
+    hoverAtDist(x,y) // Helps to hover the path at a defined distance in order to make thin stroke easier to be hovered
+    {
+          
+      let minDist = MIN_HOVER_DIST;
+      const length = this.m_currentPath.getTotalLength();
+      var closestPointIndex = -1;
+      for (let i = 0; i < length; i++) {
+        const point = this.m_currentPath.getPointAtLength(i);
+        const dist = (x - point.x) ** 2 + (y - point.y) ** 2;
+        if (dist < minDist) {
+          minDist = dist;
+          closestPointIndex = i;
+          this.createHelperPoint(point.x, point.y);
+
+          this.getInsertionIndex(point)
+        }
+      }
+
+      if(closestPointIndex == -1)
+      {
+        this.removeHelperPoint();
+        this.removeHelperPath();
+      }
     }
 
     getInsertionIndex(pos, _highlightPortion = false)
@@ -551,15 +571,9 @@ class Loonk {
         if(portion.isPointInStroke(contactPoint))
         {
           insertIndex = nextI;
-          if(_highlightPortion)
-          {  
-            portion.setAttribute("stroke", POINT_COLOR)
-            portion.setAttribute("stroke-width", 2.5)
+          portion.setAttribute("stroke", POINT_COLOR)
+          portion.setAttribute("stroke-width", 2.5)
 
-            // Display a point on path
-            this.createHelperPoint(pos.x, pos.y);
-
-          }
           this.m_portion = portion;
           break;
         }
@@ -570,31 +584,53 @@ class Loonk {
 
 
       }
- 
+      // console.log(insertIndex)
+      this.m_newPointInsertIndex = insertIndex;
       return insertIndex;
 
     }
 
-    hoverAtDist(x,y) // Helps to hover the path at a defined distance in order to make thin stroke easier to be hovered
+
+    getPrevPointIndexInPath(_pIndex)
     {
-          
-      let minDist = MIN_HOVER_DIST;
-      const length = this.m_currentPath.getTotalLength();
-      var closestPointIndex = -1;
-      for (let i = 0; i < length; i++) {
-        const point = this.m_currentPath.getPointAtLength(i);
-        const dist = (x - point.x) ** 2 + (y - point.y) ** 2;
-        if (dist < minDist) {
-          minDist = dist;
-          closestPointIndex = i;
-          this.createHelperPoint(point.x, point.y);
+      const pathLength = this.m_currentPath.getTotalLength();
+
+      var indexes = [];
+      // Get m_path points corresponding indexes on path (pathLength)
+      for (let i = 0; i < this.m_path.m_points.length; i++) 
+      {
+        const objPoint = this.m_path.m_points[i];
+        for (let j = 0; j < pathLength; j++) 
+        {
+          let point = this.m_currentPath.getPointAtLength(j);
+
+          if(j>0)
+          {
+            console.log(point.x - this.m_currentPath.getPointAtLength(j-1).x)
+          }
+
+          if ((point.x) == (objPoint.x) && (point.y) == (objPoint.y)) 
+          {
+            indexes.push(j);
+          }
         }
       }
 
-      if(closestPointIndex == -1)
+      // Get the last prev point index in m_path.m_points context
+      var pointIndex = -1;
+      for (let k = 0; k < indexes.length; k++) 
       {
-        this.removeHelperPoint();
+        const el = indexes[k];
+
+        if(_pIndex > el)
+        {
+          pointIndex = k;
+        }
+        
       }
+
+      return pointIndex;
+ 
     }
 
     createSVGPoint(_x, _y)
@@ -606,6 +642,11 @@ class Loonk {
     }
     createHelperPath(p1, p2)
     {
+
+      if(this.m_svg.querySelector("."+LOONK_PATH_HELPER_CLASS)) // Preventing multiple helper path
+      {
+        this.m_svg.removeChild(this.m_svg.querySelector("."+LOONK_PATH_HELPER_CLASS))
+      }
 
       let path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.classList.add(LOONK_PATH_HELPER_CLASS);
@@ -630,6 +671,7 @@ class Loonk {
         var p = this.m_svg.querySelector("."+LOONK_POINT_HELPER_CLASS);
         p.setAttribute('cx', _x);
         p.setAttribute('cy', _y);
+        p.style.pointerEvents = "none";
         return;
       }
 
@@ -640,9 +682,13 @@ class Loonk {
       point.setAttribute('fill', POINT_COLOR);
       point.setAttribute('stroke', POINT_COLOR);
       point.setAttribute('stroke-width', 1);
+      point.style.pointerEvents = "none";
       point.classList.add(LOONK_POINT_HELPER_CLASS)
 
       this.m_controls.append(point);
+
+      // Create future endpoint to be added
+      this.m_currentHoverPoint = this.createEndPoint(_x, _y)
 
     }
 
@@ -653,6 +699,15 @@ class Loonk {
       if(pointHelper)
         this.m_controls.removeChild(pointHelper);
 
+    }
+
+    removeHelperPath()
+    {
+      // Remove pathHelpers : Higlighters
+      var pathHelpers = this.m_svg.querySelectorAll("."+ LOONK_PATH_HELPER_CLASS)
+      pathHelpers.forEach(el => {
+        this.m_svg.removeChild(el);
+      });
     }
   
     closePath() {

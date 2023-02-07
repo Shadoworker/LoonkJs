@@ -488,30 +488,34 @@ class Loonk {
     }
     
     // Helps to hover the path at a defined distance in order to make thin stroke easier to be hovered
-    hoverAtDist(x,y) 
-    {
-          
+    hoverAtDist(x, y) {
       let minDist = MIN_HOVER_DIST;
-      const length = this.m_currentPath.getTotalLength();
-      var closestPointIndex = -1;
-      for (let i = 0; i < length; i++) {
-        const point = this.m_currentPath.getPointAtLength(i);
+      const len = this.m_currentPath.m_shapePoints.length;
+
+      let closestPointIndex = -1;
+      var p = null;
+      for (let i = 0; i < len; i++) {
+
+        const point = this.m_currentPath.m_shapePoints[i];
+
         const dist = (x - point.x) ** 2 + (y - point.y) ** 2;
+
         if (dist < minDist) {
           minDist = dist;
           closestPointIndex = i;
-          this.createHelperPoint(point.x, point.y);
-
-          this.getInsertionIndex(point)
+          p = point
         }
       }
-
-      if(closestPointIndex == -1)
-      {
+    
+      if (closestPointIndex !== -1) { 
+        this.createHelperPoint(p.x, p.y);
+        this.getInsertionIndex(p);
+      } else {
         this.removeHelperPoint();
         this.removeHelperPath();
       }
     }
+    
 
     getInsertionIndex(pos, _highlightPortion = false)
     {
@@ -842,6 +846,7 @@ class Loonk {
           // this.initPath()
      
 
+
       }
 
     }
@@ -852,6 +857,23 @@ class Loonk {
         d += this.createBezier(prev_ep, ep)
         this.m_currentPath.setAttribute("d", d)
 
+
+        if(this.m_path.m_isClosed)
+        {
+          // Store path natural points once in order to optimize called function on mousemove
+          setTimeout(() => {
+              var len = this.m_currentPath.getTotalLength();
+              var shapePoints = [];
+              for (let i = 0; i < len; i++) {
+                
+                const point = this.m_currentPath.getPointAtLength(i);
+                shapePoints.push(point)
+              }
+
+              this.m_currentPath.m_shapePoints = shapePoints;
+          }, 150); // In order to close without delay the path
+
+        }
         
         
     }

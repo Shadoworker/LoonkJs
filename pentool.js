@@ -273,14 +273,15 @@ class Loonk {
             
       // // Presets
       this.m_drawing = false   
+      this.m_drawEnded = true;
     
-
     }
 
     initPath()
     {
   
       this.m_drawing = true   
+      this.m_drawEnded = false   
       this.m_dragging = false   
       this.m_editCpBalance = false  
       this.m_isNewEndPoint = false   
@@ -387,7 +388,7 @@ class Loonk {
         this.setCursor("pen")
 
 
-      if(this.m_path.m_isClosed)
+      if(this.m_drawEnded)
       {
         this.hoverAtDist(pos.x, pos.y)
       }
@@ -452,6 +453,11 @@ class Loonk {
           e.preventDefault()
           this.deleteEndPoint()
           this.render()
+          break;
+        case "Enter" :
+          this.resetPath();
+          this.render()
+          break;
       }
     }
     // active the canvas's eventListner
@@ -515,6 +521,63 @@ class Loonk {
         this.removeHelperPath();
       }
     }
+
+    // Replace (.getTotalLength + Loop through .getPointAtLength) : which is too memory consuming and lag causing
+    getPointsAlongCurve(d) {
+
+      let commands = d.match(/[A-Za-z][^A-Za-z]*/g);
+      let points = [];
+      const NUMBER_OF_STEPS = 150; // to be more accurate 
+      let currentX = 0;
+      let currentY = 0;
+    
+      let step = 1 / NUMBER_OF_STEPS;
+
+      for (let i = 0; i < commands.length; i++) {
+        let command = commands[i];
+        let type = command[0];
+        let values = command.substring(1).trim().split(/[\s,]+/);
+    
+        switch (type) {
+          case "M":
+            currentX = parseFloat(values[0]);
+            currentY = parseFloat(values[1]);
+            break;
+          case "C":
+            let x1 = parseFloat(values[0]);
+            let y1 = parseFloat(values[1]);
+            let x2 = parseFloat(values[2]);
+            let y2 = parseFloat(values[3]);
+            let x = parseFloat(values[4]);
+            let y = parseFloat(values[5]);
+    
+            // Approximate the curve using line segments
+            let t = 0;
+            while (t < 1) {
+              let xT =
+                currentX * (1 - t) * (1 - t) * (1 - t) +
+                3 * x1 * t * (1 - t) * (1 - t) +
+                3 * x2 * t * t * (1 - t) +
+                x * t * t * t;
+              let yT =
+                currentY * (1 - t) * (1 - t) * (1 - t) +
+                3 * y1 * t * (1 - t) * (1 - t) +
+                3 * y2 * t * t * (1 - t) +
+                y * t * t * t;
+              points.push({ x: xT, y: yT });
+              t += step;
+            }
+    
+            currentX = x;
+            currentY = y;
+            break;
+        }
+      }
+    
+
+      return points;
+
+    }  
     
 
     getInsertionIndex(pos, _highlightPortion = false)
@@ -531,7 +594,7 @@ class Loonk {
 
         // Create the portion 
         var portion = this.createHelperPath(p, nextP)
-        this.m_svg.append(portion)
+        this.m_svg.appendChild(portion)
         // and check if current mouse pos is in this portion
         if(portion.isPointInStroke(contactPoint))
         {
@@ -653,7 +716,7 @@ class Loonk {
       point.style.pointerEvents = "none";
       point.classList.add(LOONK_POINT_HELPER_CLASS)
 
-      this.m_controls.append(point);
+      this.m_controls.appendChild(point);
 
    
 
@@ -683,28 +746,7 @@ class Loonk {
       this.m_path.m_isClosed = true // Close previous path
       this.resetPath();
 
-
       this.setCursor("arrow")
-
-      // setTimeout(() => {
-
-      //   var helper = this.m_currentPath.cloneNode();
-      //   helper.setAttribute("id", null);
-      //   helper.setAttribute("stroke-width", 10);
-      //   helper.setAttribute("stroke", "red");
-      //   helper.setAttribute("stroke-opacity", 0.1);
-     
-      //   setTimeout(() => {
-      //   this.scalePath(helper)
-      //   }, 300);
-        
-      //   this.m_svg.appendChild(helper);
-      //   this.m_currentPath._hoverHelper = helper;
-       
-
-      // }, 50);
-
-
 
     }
 
@@ -844,9 +886,7 @@ class Loonk {
 
           // Init new path....
           // this.initPath()
-     
-
-
+      
       }
 
     }
@@ -857,22 +897,10 @@ class Loonk {
         d += this.createBezier(prev_ep, ep)
         this.m_currentPath.setAttribute("d", d)
 
-
-        if(this.m_path.m_isClosed)
+        // Internal points...
+        if(this.m_drawEnded)
         {
-          // Store path natural points once in order to optimize called function on mousemove
-          setTimeout(() => {
-              var len = this.m_currentPath.getTotalLength();
-              var shapePoints = [];
-              for (let i = 0; i < len; i++) {
-                
-                const point = this.m_currentPath.getPointAtLength(i);
-                shapePoints.push(point)
-              }
-
-              this.m_currentPath.m_shapePoints = shapePoints;
-          }, 150); // In order to close without delay the path
-
+          this.updatePathInternalPoints();
         }
         
         
@@ -884,6 +912,17 @@ class Loonk {
       ep.x + "," + ep.y;
       
     }
+
+    updatePathInternalPoints()
+    {
+      // Store path internal points once for optimization
+      setTimeout(() => {
+          var shapePoints = this.getPointsAlongCurve(this.m_currentPath.getAttribute("d"));
+          this.m_currentPath.m_shapePoints = shapePoints;
+      }, 100); // In order to close without delay the path
+
+    }
+
   }
   
 /** PEN END */

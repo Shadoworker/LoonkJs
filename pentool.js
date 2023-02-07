@@ -1,6 +1,7 @@
  
   // Classes
   const LOONK_PATH_CLASS ='loonk_scene_path';
+  const LOONK_PATH_PREDICTOR_CLASS ='loonk_scene_path_predictor';
   const LOONK_PATH_HELPER_CLASS ='loonk_scene_path_helper';
   const LOONK_POINT_HELPER_CLASS ='loonk_scene_point_helper';
   const LOONK_PATH_CLASS_HOVER ='loonk_scene_path_hover';
@@ -215,15 +216,18 @@ class Path{
     }
   }
 
-  getPointSiblingInPath(_x, _y) // Gets the previous nearest point on path
+  updatePoint(_index, _newPos)
   {
+    var p = this.m_points[_index];
 
-    for (let i = 0; i < this.m_points.length; i++) {
-      const p = this.m_points[i];
+    p.x = _newPos.x;
+    p.y = _newPos.y;
 
+    p.cp0.x = _newPos.x;
+    p.cp0.y = _newPos.y;
 
-      
-    }
+    p.cp1.x = _newPos.x;
+    p.cp1.y = _newPos.y;
 
   }
 
@@ -286,6 +290,7 @@ class Loonk {
       this.m_editCpBalance = false  
       this.m_isNewEndPoint = false   
       this.m_currentSelectedPoint = null   
+      this.m_futureSelectedPoint = null   
       this.m_draggingControlPoint = null   
       this.m_pathStarted = false;
       this.m_portion = false;
@@ -299,7 +304,14 @@ class Loonk {
       this.m_path = new Path();
       this.m_paths.push(this.m_path)
       
+      /** Path */
       this.m_currentPath = this.createPathElement();
+      this.m_currentPath.m_path = this.m_path; // set path ref
+      /** --------------------------- */
+      /** Predictor */
+      this.m_predictorPath = this.createPredictorPathElement();
+      /** -------------------------- */
+
       this.m_currentPath._hoverHelper = null;
       this.m_pathElements.push(this.m_currentPath)
 
@@ -365,7 +377,7 @@ class Loonk {
 
           if(!this.m_drawing) return;
 
-          this.m_currentSelectedPoint = this.createEndPoint(pos.x, pos.y)
+          this.m_currentSelectedPoint = this.createEndPoint(pos.x, pos.y) // First Point(or point n)
           this.m_isNewEndPoint = true;
 
           if(this.m_editCpBalance && selectedPath){
@@ -388,6 +400,15 @@ class Loonk {
         this.setCursor("pen")
 
 
+      if(this.m_drawing && this.m_currentSelectedPoint)
+      {
+        var prev_ep = this.m_path.m_points.at(-1);
+        var next_ep = this.createEndPoint(pos.x, pos.y) // Next Point(or point n+1)
+
+        this.updatePredictorPath(prev_ep, next_ep);
+      }
+    
+
       if(this.m_drawEnded)
       {
         this.hoverAtDist(pos.x, pos.y)
@@ -397,6 +418,8 @@ class Loonk {
         return
       }
   
+
+
       if(this.m_isNewEndPoint){
           csp.cp1.x = pos.x
           csp.cp1.y = pos.y
@@ -421,7 +444,7 @@ class Loonk {
           // Dragging endpoint
           let offset = {
             x: pos.x - csp.x,
-            y: pos.y-csp.y
+            y: pos.y - csp.y
           }
           csp.x = pos.x
           csp.y = pos.y
@@ -618,49 +641,6 @@ class Loonk {
 
     }
 
-
-    getPrevPointIndexInPath(_pIndex)
-    {
-      const pathLength = this.m_currentPath.getTotalLength();
-
-      var indexes = [];
-      // Get m_path points corresponding indexes on path (pathLength)
-      for (let i = 0; i < this.m_path.m_points.length; i++) 
-      {
-        const objPoint = this.m_path.m_points[i];
-        for (let j = 0; j < pathLength; j++) 
-        {
-          let point = this.m_currentPath.getPointAtLength(j);
-
-          if(j>0)
-          {
-            console.log(point.x - this.m_currentPath.getPointAtLength(j-1).x)
-          }
-
-          if ((point.x) == (objPoint.x) && (point.y) == (objPoint.y)) 
-          {
-            indexes.push(j);
-          }
-        }
-      }
-
-      // Get the last prev point index in m_path.m_points context
-      var pointIndex = -1;
-      for (let k = 0; k < indexes.length; k++) 
-      {
-        const el = indexes[k];
-
-        if(_pIndex > el)
-        {
-          pointIndex = k;
-        }
-        
-      }
-
-      return pointIndex;
- 
-    }
-
     createSVGPoint(_x, _y)
     {
       var p = this.m_svg.createSVGPoint()
@@ -690,6 +670,15 @@ class Loonk {
       return path;
 
     }
+
+    updatePredictorPath(p1, p2)
+    {
+      var curve = this.createBezier(p1, p2)
+      var d = "M"+p1.x+ ","+p1.y + curve;
+
+      this.m_predictorPath.setAttribute("d", d);
+    }
+
 
     createHelperPoint(_x, _y)
     {
@@ -781,10 +770,19 @@ class Loonk {
       path.setAttribute("stroke-width", 1.5);
 
       
-      path.m_path = this.m_path; // set path ref
       this.m_svg.prepend(path)
-      this.m_currentPath = path
       return path;
+    }
+
+    createPredictorPathElement()
+    {
+      var basePath = this.createPathElement();
+      basePath.removeAttribute("id");
+      basePath.classList.replace(LOONK_PATH_CLASS, LOONK_PATH_PREDICTOR_CLASS);
+      basePath.setAttribute("stroke-width", 1)
+      basePath.setAttribute("stroke-dasharray", "4 3")
+
+      return basePath;
     }
 
     createControlsContainer()
@@ -897,9 +895,12 @@ class Loonk {
         d += this.createBezier(prev_ep, ep)
         this.m_currentPath.setAttribute("d", d)
 
-        // Internal points...
         if(this.m_drawEnded)
         {
+          // Remove predictor path from DOM
+          this.removePredictorPath();
+          
+        // Get Internal points...
           this.updatePathInternalPoints();
         }
         
@@ -921,6 +922,15 @@ class Loonk {
           this.m_currentPath.m_shapePoints = shapePoints;
       }, 100); // In order to close without delay the path
 
+    }
+
+    removePredictorPath()
+    {
+      if(this.m_svg.querySelector("."+LOONK_PATH_PREDICTOR_CLASS))
+      {
+        var predictor = this.m_svg.querySelector("."+LOONK_PATH_PREDICTOR_CLASS);
+        this.m_svg.removeChild(predictor);
+      }
     }
 
   }

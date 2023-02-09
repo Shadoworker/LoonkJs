@@ -296,6 +296,8 @@ class Loonk {
       this.m_portion = false;
       this.m_currentHoverPoint = null;
       this.m_newPointInsertIndex = -1;
+      this.m_newPointPrev = null;
+      this.m_newPointNext = null;
 
       // Define controls container
       ControlPoint.prototype.m_controls = this.m_controls
@@ -347,6 +349,9 @@ class Loonk {
       if(!this.m_drawing && this.m_newPointInsertIndex != -1)
       {
         this.insertEndPointToPath(this.m_currentHoverPoint.x, this.m_currentHoverPoint.y)
+
+        // console.log(this.getControlPoints(this.m_newPointPrev, this.m_newPointPrev.cp0, this.m_newPointPrev.cp0, this.m_newPointNext, this.m_currentHoverPoint))
+
         console.log("INSERTED")
       }
 
@@ -508,6 +513,19 @@ class Loonk {
 
       var pointToInsert = this.createEndPoint(_x, _y)
 
+      var relIndex = this.getPointRelativeIndex(this.m_currentHoverPoint, this.m_newPointPrev, this.m_newPointNext);
+
+      console.log(this.splitBezier(this.m_newPointPrev, this.m_newPointNext.cp0, this.m_newPointNext.cp1, this.m_newPointNext));
+      // var cps = this.getControlPoints({x:_x, y:_y});
+
+      // pointToInsert.cp0.x = cps.cp0.x;
+      // pointToInsert.cp0.y = cps.cp0.y;
+
+      // pointToInsert.cp1.x = cps.cp1.x;
+      // pointToInsert.cp1.y = cps.cp1.y;
+
+      // console.log(cps)
+
       if(this.m_newPointInsertIndex != -1) // Not in path
       // this.selectPath(e)
      
@@ -597,6 +615,7 @@ class Loonk {
         }
       }
     
+      points.push(this.m_path.m_points[this.m_path.m_points.length-1]); // Add the last point
 
       return points;
 
@@ -617,6 +636,7 @@ class Loonk {
 
         // Create the portion 
         var portion = this.createHelperPath(p, nextP)
+
         this.m_svg.appendChild(portion)
         // and check if current mouse pos is in this portion
         if(portion.isPointInStroke(contactPoint))
@@ -626,6 +646,11 @@ class Loonk {
           portion.setAttribute("stroke-width", 2.5)
 
           this.m_portion = portion;
+
+          // Set refs for later
+          this.m_newPointPrev = p;
+          this.m_newPointNext = nextP;
+
           break;
         }
         else
@@ -641,6 +666,48 @@ class Loonk {
 
     }
 
+    // Get the relative index of a given point along a curve defined by two points
+    getPointRelativeIndex(h, p1, p2)
+    {
+
+      //Get p1 and p2 indexes
+      var p1Index = this.m_currentPath.m_shapePoints.findIndex(p=>p.x == p1.x && p.y == p1.y);
+      var p2Index = this.m_currentPath.m_shapePoints.findIndex(p=>p.x == p2.x && p.y == p2.y);
+      var hIndex = this.m_currentPath.m_shapePoints.findIndex(p=>p.x == h.x && p.y == h.y);
+   
+      var relIndex = (hIndex - p1Index) / (p2Index - p1Index);
+
+      return relIndex;
+
+    } 
+
+    // Function to split a Bézier curve into two smaller curves
+    splitBezier(startPoint, cp1, cp2, ep, t) {
+
+      let endPoint = ep;
+      let controlPoint1 = cp1;
+      let controlPoint2 = cp2;
+
+      let B0 = [(1 - t) * startPoint.x + t * controlPoint1.x, (1 - t) * startPoint.y + t * controlPoint1.y];
+      let B1 = [(1 - t) * controlPoint1.x + t * controlPoint2.x, (1 - t) * controlPoint1.y + t * controlPoint2.y];
+      let B2 = [(1 - t) * controlPoint2.x + t * endPoint.x, (1 - t) * controlPoint2.y + t * endPoint.y];
+      let B01 = [(1 - t) * B0[0] + t * B1[0], (1 - t) * B0[1] + t * B1[1]];
+      let B12 = [(1 - t) * B1[0] + t * B2[0], (1 - t) * B1[1] + t * B2[1]];
+      let B012 = [(1 - t) * B01[0] + t * B12[0], (1 - t) * B01[1] + t * B12[1]];
+
+      // let newPath1 = `C${B0[0]} ${B0[1]},${B01[0]} ${B01[1]},  ${B012[0]} ${B012[1]}`;
+      // let newPath2 = `C${B12[0]} ${B12[1]},${B2[0]} ${B2[1]},  ${endPoint[0]} ${endPoint[1]}`;
+
+      var result = 
+      {
+        ei : {ep:{x:B012[0],y:B012[1]},          cp0:{x:B0[0], y:B0[1]},    cp1:{x:B01[0], y:B01[1]}},
+        ep : {ep:{x:endPoint[0], y:endPoint[1]}, cp0:{x:B12[0], y:B12[1]},  cp1:{x:B2[0], y:B2[1]}}
+      }
+
+      return result;
+    }
+
+ 
     createSVGPoint(_x, _y)
     {
       var p = this.m_svg.createSVGPoint()
@@ -902,6 +969,7 @@ class Loonk {
           
         // Get Internal points...
           this.updatePathInternalPoints();
+
         }
         
         

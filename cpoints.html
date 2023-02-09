@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curve - ControlPoints</title>
+</head>
+
+<body>
+
+    <svg xmlns="http://www.w3.org/2000/svg" id="scene" width="800" height="600" class="cursor_pen">
+   
+        <path d="M8 0.5C2 9.16667 -5.8 38.1 11 84.5" id="curve" fill="none" stroke="black"/>
+        <path d="" id="newCurve" fill="none" stroke="blue"/>
+      
+            
+    </svg>
+    <script>
+        var p =  document.querySelector("path");
+        var d = p.getAttribute("d");
+        
+ 
+        
+
+        let path = "M8 0.5C2 9.16667 -5.8 38.1 11 84.5";
+
+        // Function to split a Bézier curve into two smaller curves
+        function splitBezier(path, t) {
+        let pathArray = path.split("C");
+        let startPoint = [8,0.5];
+
+        let endPoint = [11, 84.5];
+        let controlPoint1 = [2, 9.16667];
+        let controlPoint2 = [-5.8, 38.1]
+        
+        let B0 = [(1 - t) * startPoint[0] + t * controlPoint1[0], (1 - t) * startPoint[1] + t * controlPoint1[1]];
+        let B1 = [(1 - t) * controlPoint1[0] + t * controlPoint2[0], (1 - t) * controlPoint1[1] + t * controlPoint2[1]];
+        let B2 = [(1 - t) * controlPoint2[0] + t * endPoint[0], (1 - t) * controlPoint2[1] + t * endPoint[1]];
+        let B01 = [(1 - t) * B0[0] + t * B1[0], (1 - t) * B0[1] + t * B1[1]];
+        let B12 = [(1 - t) * B1[0] + t * B2[0], (1 - t) * B1[1] + t * B2[1]];
+        let B012 = [(1 - t) * B01[0] + t * B12[0], (1 - t) * B01[1] + t * B12[1]];
+
+        let newPath1 = `M${startPoint[0]} ${startPoint[1]}C${B0[0]} ${B0[1]},${B01[0]} ${B01[1]},${B012[0]} ${B012[1]}`;
+        let newPath2 = `C${B12[0]} ${B12[1]},${B2[0]} ${B2[1]},${endPoint[0]} ${endPoint[1]}`;
+        // M${B012[0]} ${B012[1]}
+        return [newPath1, newPath2];
+        }
+
+        // Example usage
+        let t = 0.75;
+        let newPaths = splitBezier(path, t);
+        console.log(newPaths[0]); // M8 0.5C5 5.08333,1.55 14.35,0.95 28.9
+        console.log(newPaths[1]); // M0.95 28.9C0.35 42.46667,2.6 61.3,11 84.5
+
+        var rep = document.querySelector("#newCurve");
+        var newD = newPaths[0] + newPaths[1];
+        // newD = "M8 0.5C5 5.08333,1.55 14.35,0.95 28.9 C0.35 42.46667,2.6 61.3,11 84.5"
+        rep.setAttribute("d", newD)
+
+    </script>
+
+</body>
+
+</html>

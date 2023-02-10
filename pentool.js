@@ -446,7 +446,6 @@ class Loonk {
         {
           var prev_ep = this.m_path.m_points.at(-1);
           var next_ep = this.createEndPoint(pos.x, pos.y) // Next Point(or point n+1)
-
           this.updatePredictorPath(prev_ep, next_ep);
         }
 

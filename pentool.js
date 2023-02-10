@@ -132,7 +132,7 @@ const endpointStyle = {
       svgEndPoint.setAttribute('stroke', stroke);
       svgEndPoint.setAttribute('stroke-width', 1);
       svgEndPoint.classList.add(END_POINT_CLASS)
-
+ 
       // Set both refs
       this.element = svgEndPoint;
       svgEndPoint._point = this;
@@ -199,6 +199,7 @@ const endpointStyle = {
       cp.x = x
       cp.y = y
     }
+
   }
 
 /**
@@ -304,7 +305,7 @@ class Loonk {
       this.m_drawing = false   
       this.m_drawEnded = true;
 
-      this.m_drawState = DRAW_STATE.NONE;
+      this.m_drawState = DRAW_STATE.MODIFY;
       this.m_pathState = PATH_STATE.SELECTED; // select the current path for edition
     
     }
@@ -330,6 +331,8 @@ class Loonk {
       this.m_newPointNext = null;
 
       // Define controls container
+      ControlPoint.prototype.m_root = this
+      EndPoint.prototype.m_root = this
       ControlPoint.prototype.m_controls = this.m_controls
       EndPoint.prototype.m_controls = this.m_controls
       
@@ -407,6 +410,9 @@ class Loonk {
             // close path
             this.closePath()
         }
+
+        this.removeHelperPath();
+
       } 
       else 
       {
@@ -438,7 +444,7 @@ class Loonk {
       if(!this.m_path.m_isClosed)
         this.setCursor("pen")
 
-      if(e.buttons != 1) 
+      if(e.buttons != 1) // Not Draging
       {
              
         // Next Endpoint prediction logic
@@ -452,7 +458,8 @@ class Loonk {
         // if(this.m_drawEnded)
         if(this.m_pathState ==  PATH_STATE.SELECTED)
         {
-          this.hoverAtDist(pos.x, pos.y)
+          var target = e.target; // To filter endpoints/controlpoints
+          this.hoverAtDist(target, pos.x, pos.y)
         }
 
       }
@@ -461,13 +468,16 @@ class Loonk {
 
         if(this.m_mouseState != MOUSE_STATE.DRAG) return;
 
-        if(this.m_isNewEndPoint){
+        if(this.m_isNewEndPoint)
+        {
             csp.cp1.x = pos.x
             csp.cp1.y = pos.y
     
             csp.cp0.x = csp.x * 2 - pos.x
             csp.cp0.y = csp.y * 2 - pos.y
-        } else if (this.m_draggingControlPoint){
+        } 
+        else if (this.m_draggingControlPoint)
+        {
             // Dragging controlPoint
 
             if(this.m_editCpBalance){
@@ -478,11 +488,13 @@ class Loonk {
 
             csp.ep.calculateControlPoint(pos.x, pos.y, this.m_draggingControlPoint)
 
-        } else if(this.m_currentSelectedPoint){
+        } 
+        else if(this.m_currentSelectedPoint)
+        {
+            // Dragging endpoint
 
             this.setCursor("arrow")
 
-            // Dragging endpoint
             let offset = {
               x: pos.x - csp.x,
               y: pos.y - csp.y
@@ -590,7 +602,7 @@ class Loonk {
     }
     
     // Helps to hover the path at a defined distance in order to make thin stroke easier to be hovered
-    hoverAtDist(x, y) {
+    hoverAtDist(_target, x, y) {
       let minDist = MIN_HOVER_DIST;
       const len = this.m_currentPath.m_shapePoints.length;
 
@@ -611,17 +623,25 @@ class Loonk {
     
       if (closestPointIndex !== -1) 
       { 
+        this.setCursor("insert")
+
         this.createHelperPoint(p.x, p.y);
         this.getInsertionIndex(p);
 
         this.m_drawState = DRAW_STATE.INSERT;
+
+        if(_target.classList.contains(END_POINT_CLASS))
+          this.m_drawState = DRAW_STATE.MODIFY;
+
       } 
       else 
       {
+        this.setCursor("arrow")
+
         this.removeHelperPoint();
         this.removeHelperPath();
 
-        this.m_drawState = DRAW_STATE.CREATE;
+        this.m_drawState = DRAW_STATE.MODIFY;
 
       }
     }
@@ -863,24 +883,23 @@ class Loonk {
       this.setCursor("arrow")
 
     }
-
-    scalePath(path)
-    {
-      const rect = path.getBoundingClientRect();
-
-      const cx = rect.left + rect.width/2;
-      const cy = rect.top + rect.height/2;
-      
-      const sx = 2;  // scale factor for x axis
-      const sy = 2;  // scale factor for y axis
-      
-      path.style.transform = `translate(${cx}px,${cy}px) scale(${sx},${sy}) translate(${-cx}px,${-cy}px)`;
-    }
-
+ 
     setCursor(_cursor)
     {
-      var toremove = _cursor == "arrow" ? "cursor_pen" : "cursor_arrow";
-      this.m_svg.classList.remove(toremove)
+      var toremove = [];
+      switch (_cursor) {
+        case "arrow":
+          toremove = ["cursor_pen", "cursor_insert"]
+          break;
+        case "pen":
+          toremove = ["cursor_arrow", "cursor_insert"]
+          break;
+        case "insert":
+          toremove = ["cursor_arrow", "cursor_pen"]
+          break;
+      }
+
+      this.m_svg.classList.remove(...toremove)
       this.m_svg.classList.add("cursor_"+_cursor)
 
     }

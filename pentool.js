@@ -511,27 +511,43 @@ class Loonk {
     insertEndPointToPath(_x, _y)
     {
 
-      var pointToInsert = this.createEndPoint(_x, _y)
+      if(this.m_newPointInsertIndex == -1) // Not in path
+        return;
 
       var relIndex = this.getPointRelativeIndex(this.m_currentHoverPoint, this.m_newPointPrev, this.m_newPointNext);
 
-      console.log(this.splitBezier(this.m_newPointPrev, this.m_newPointNext.cp0, this.m_newPointNext.cp1, this.m_newPointNext));
-      // var cps = this.getControlPoints({x:_x, y:_y});
+      var start = this.m_newPointPrev;
+      var end = this.m_newPointNext;
+ 
+      var result = this.splitBezier(start, start.cp1, end.cp0, end, relIndex);
 
-      // pointToInsert.cp0.x = cps.cp0.x;
-      // pointToInsert.cp0.y = cps.cp0.y;
+      // The following logic relies on "bezierCurveTo" Method logic 
+      // in order to set for each point it's control points (insertedPoint and nextPoint)
 
-      // pointToInsert.cp1.x = cps.cp1.x;
-      // pointToInsert.cp1.y = cps.cp1.y;
+      var ei = result.ei; // Presets of the New point to insert
+      var ep = result.ep; // Presets of the Point after the new point
 
-      // console.log(cps)
+      // Define new point's controls
+      var tPoint = this.createEndPoint(ei.ep.x, ei.ep.y)
+      // tPoint.cp0.x = ei.cp1.x;  tPoint.cp0.y = ei.cp1.y;
+      // tPoint.cp1.x = ep.cp0.x;  tPoint.cp1.y = ep.cp0.y;
 
-      if(this.m_newPointInsertIndex != -1) // Not in path
+      tPoint.cp0.x = ei.cp0.x;  tPoint.cp0.y = ei.cp0.y;
+      tPoint.cp1.x = ei.cp1.x;  tPoint.cp1.y = ei.cp1.y;
+
       // this.selectPath(e)
-     
-      this.m_path.m_points.splice(this.m_newPointInsertIndex, 0, pointToInsert)
+      /* insert the new point at the right index */
+      this.m_path.m_points.splice(this.m_newPointInsertIndex, 0, tPoint);
 
+      /* Update next point's controls */
+      this.m_path.m_points[this.m_newPointInsertIndex+1].cp0.x = ep.cp0.x;
+      this.m_path.m_points[this.m_newPointInsertIndex+1].cp0.y = ep.cp0.y;
+
+      // Render
       this.render()
+
+      // console.log(this.m_path.m_points)
+
     }
     
     // Helps to hover the path at a defined distance in order to make thin stroke easier to be hovered
@@ -682,12 +698,14 @@ class Loonk {
     } 
 
     // Function to split a Bézier curve into two smaller curves
-    splitBezier(startPoint, cp1, cp2, ep, t) {
+    splitBezier(_startPoint, cp1, cp2, _endPoint, t=0.5) {
 
-      let endPoint = ep;
-      let controlPoint1 = cp1;
-      let controlPoint2 = cp2;
+      let startPoint = {x:_startPoint.x, y:_startPoint.y};
+      let controlPoint1 = {x:cp1.x, y:cp1.y};
+      let controlPoint2 = {x:cp2.x, y:cp2.y};
+      let endPoint = {x:_endPoint.x, y:_endPoint.y};
 
+      
       let B0 = [(1 - t) * startPoint.x + t * controlPoint1.x, (1 - t) * startPoint.y + t * controlPoint1.y];
       let B1 = [(1 - t) * controlPoint1.x + t * controlPoint2.x, (1 - t) * controlPoint1.y + t * controlPoint2.y];
       let B2 = [(1 - t) * controlPoint2.x + t * endPoint.x, (1 - t) * controlPoint2.y + t * endPoint.y];
@@ -695,14 +713,18 @@ class Loonk {
       let B12 = [(1 - t) * B1[0] + t * B2[0], (1 - t) * B1[1] + t * B2[1]];
       let B012 = [(1 - t) * B01[0] + t * B12[0], (1 - t) * B01[1] + t * B12[1]];
 
-      // let newPath1 = `C${B0[0]} ${B0[1]},${B01[0]} ${B01[1]},  ${B012[0]} ${B012[1]}`;
-      // let newPath2 = `C${B12[0]} ${B12[1]},${B2[0]} ${B2[1]},  ${endPoint[0]} ${endPoint[1]}`;
-
       var result = 
       {
-        ei : {ep:{x:B012[0],y:B012[1]},          cp0:{x:B0[0], y:B0[1]},    cp1:{x:B01[0], y:B01[1]}},
-        ep : {ep:{x:endPoint[0], y:endPoint[1]}, cp0:{x:B12[0], y:B12[1]},  cp1:{x:B2[0], y:B2[1]}}
+        ei : {ep:{x:B012[0],y:B012[1]},        cp0:{x:B01[0], y:B01[1]},    cp1:{x:B12[0], y:B12[1]}},
+        ep : {ep:{x:endPoint.x, y:endPoint.y}, cp0:{x:B2[0], y:B2[1]},  cp1:{x:_endPoint.cp1.x, y:_endPoint.cp1.y}}
       }
+
+      let newPath = 
+      `M${startPoint.x} ${startPoint.y} 
+       C${B0[0]}  ${B0[1]}, ${B01[0]} ${B01[1]},${B012[0]}    ${B012[1]} 
+       C${B12[0]} ${B12[1]},${B2[0]}  ${B2[1]}, ${endPoint.x} ${endPoint.y}`;
+
+      console.log(newPath);
 
       return result;
     }

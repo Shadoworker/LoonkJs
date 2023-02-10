@@ -514,12 +514,12 @@ class Loonk {
       if(this.m_newPointInsertIndex == -1) // Not in path
         return;
 
-      var relIndex = this.getPointRelativeIndex(this.m_currentHoverPoint, this.m_newPointPrev, this.m_newPointNext);
+      var relativeIndex = this.getPointRelativeIndex(this.m_currentHoverPoint, this.m_newPointPrev, this.m_newPointNext);
 
       var start = this.m_newPointPrev;
       var end = this.m_newPointNext;
  
-      var result = this.splitBezier(start, start.cp1, end.cp0, end, relIndex);
+      var result = this.splitBezier(start, start.cp1, end.cp0, end, relativeIndex);
       // The following logic relies on "bezierCurveTo" Method logic 
       // in order to set for each point it's control points (insertedPoint and nextPoint)
       var ei = result.ei; // Presets of the New point to insert
@@ -682,15 +682,14 @@ class Loonk {
     // Get the relative index of a given point along a curve defined by two points
     getPointRelativeIndex(h, p1, p2)
     {
-
       //Get p1 and p2 indexes
       var p1Index = this.m_currentPath.m_shapePoints.findIndex(p=>p.x == p1.x && p.y == p1.y);
       var p2Index = this.m_currentPath.m_shapePoints.findIndex(p=>p.x == p2.x && p.y == p2.y);
       var hIndex = this.m_currentPath.m_shapePoints.findIndex(p=>p.x == h.x && p.y == h.y);
    
-      var relIndex = (hIndex - p1Index) / (p2Index - p1Index);
+      var relativeIndex = (hIndex - p1Index) / (p2Index - p1Index);
 
-      return relIndex;
+      return relativeIndex;
 
     } 
 

@@ -524,6 +524,7 @@ class Loonk {
       // in order to set for each point it's control points (insertedPoint and nextPoint)
       var ei = result.ei; // Presets of the New point to insert
       var ep = result.ep; // Presets of the Point after the new point
+      var pp = result.pp; // Presets of the Point before the new point
 
       // Define new point's controls
       var tPoint = this.createEndPoint(ei.ep.x, ei.ep.y)
@@ -534,14 +535,15 @@ class Loonk {
       /* insert the new point at the right index */
       this.m_path.m_points.splice(this.m_newPointInsertIndex, 0, tPoint);
 
+      /* Update prev point's controls */
+      this.m_path.m_points[this.m_newPointInsertIndex-1].cp1.x = pp.cp1.x;
+      this.m_path.m_points[this.m_newPointInsertIndex-1].cp1.y = pp.cp1.y;
       /* Update next point's controls */
       this.m_path.m_points[this.m_newPointInsertIndex+1].cp0.x = ep.cp0.x;
       this.m_path.m_points[this.m_newPointInsertIndex+1].cp0.y = ep.cp0.y;
 
       // Render
       this.render()
-
-      // console.log(this.m_path.m_points)
 
     }
     
@@ -710,8 +712,9 @@ class Loonk {
 
       var result = 
       {
-        ei : {ep:{x:B012[0],y:B012[1]},        cp0:{x:B01[0], y:B01[1]},    cp1:{x:B12[0], y:B12[1]}},
-        ep : {ep:{x:endPoint.x, y:endPoint.y}, cp0:{x:B2[0], y:B2[1]},  cp1:{x:_endPoint.cp1.x, y:_endPoint.cp1.y}}
+        ei : {ep:{x:B012[0],    y:B012[1]},     cp0:{x:B01[0], y:B01[1]},   cp1:{x:B12[0],          y:B12[1]}},
+        ep : {ep:{x:endPoint.x, y:endPoint.y},  cp0:{x:B2[0],  y:B2[1]},    cp1:{x:_endPoint.cp1.x, y:_endPoint.cp1.y}},
+        pp : {cp1 : {x:B0[0], y:B0[1]}}
       }
 
       return result;

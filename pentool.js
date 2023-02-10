@@ -405,10 +405,13 @@ class Loonk {
           this.m_isNewEndPoint = true
         }
   
-        if(!this.m_draggingControlPoint && this.m_currentSelectedPoint === this.m_path.m_points[0] && this.m_path.m_points.length > 2){
-            // click first endpoint
-            // close path
+        if(this.m_drawState == DRAW_STATE.CREATE)
+        { 
+          if(!this.m_draggingControlPoint && this.m_currentSelectedPoint === this.m_path.m_points[0] && this.m_path.m_points.length > 2)
+          {
+            // First endpoint clicked ==> Close the path
             this.closePath()
+          }
         }
 
         this.removeHelperPath();

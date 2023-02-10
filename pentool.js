@@ -348,7 +348,7 @@ class Loonk {
       
       if(!this.m_drawing && this.m_newPointInsertIndex != -1)
       {
-        this.insertEndPointToPath(this.m_currentHoverPoint.x, this.m_currentHoverPoint.y)
+        this.insertNewPointToBezier()
 
         // console.log(this.getControlPoints(this.m_newPointPrev, this.m_newPointPrev.cp0, this.m_newPointPrev.cp0, this.m_newPointNext, this.m_currentHoverPoint))
 
@@ -508,7 +508,7 @@ class Loonk {
     }
     
     // Insert a new endpoint at the hovered position in current path
-    insertEndPointToPath(_x, _y)
+    insertNewPointToBezier()
     {
 
       if(this.m_newPointInsertIndex == -1) // Not in path
@@ -520,18 +520,13 @@ class Loonk {
       var end = this.m_newPointNext;
  
       var result = this.splitBezier(start, start.cp1, end.cp0, end, relIndex);
-
       // The following logic relies on "bezierCurveTo" Method logic 
       // in order to set for each point it's control points (insertedPoint and nextPoint)
-
       var ei = result.ei; // Presets of the New point to insert
       var ep = result.ep; // Presets of the Point after the new point
 
       // Define new point's controls
       var tPoint = this.createEndPoint(ei.ep.x, ei.ep.y)
-      // tPoint.cp0.x = ei.cp1.x;  tPoint.cp0.y = ei.cp1.y;
-      // tPoint.cp1.x = ep.cp0.x;  tPoint.cp1.y = ep.cp0.y;
-
       tPoint.cp0.x = ei.cp0.x;  tPoint.cp0.y = ei.cp0.y;
       tPoint.cp1.x = ei.cp1.x;  tPoint.cp1.y = ei.cp1.y;
 
@@ -718,13 +713,6 @@ class Loonk {
         ei : {ep:{x:B012[0],y:B012[1]},        cp0:{x:B01[0], y:B01[1]},    cp1:{x:B12[0], y:B12[1]}},
         ep : {ep:{x:endPoint.x, y:endPoint.y}, cp0:{x:B2[0], y:B2[1]},  cp1:{x:_endPoint.cp1.x, y:_endPoint.cp1.y}}
       }
-
-      let newPath = 
-      `M${startPoint.x} ${startPoint.y} 
-       C${B0[0]}  ${B0[1]}, ${B01[0]} ${B01[1]},${B012[0]}    ${B012[1]} 
-       C${B12[0]} ${B12[1]},${B2[0]}  ${B2[1]}, ${endPoint.x} ${endPoint.y}`;
-
-      console.log(newPath);
 
       return result;
     }

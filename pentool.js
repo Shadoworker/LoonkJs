@@ -11,11 +11,35 @@
   const POINT_COLOR = "#DA2F74";
   const POINT_BORDER_COLOR = "#FFFFFF";
   const LINE_COLOR = "#E193B2";
+  const PREDICTOR_COLOR = "#4E4E4E";
+
 
   // Presets 
   const SCENE_WIDTH = 800;
   const SCENE_HEIGHT = 600;
   const MIN_HOVER_DIST = 40;
+
+
+  // States
+  const DRAW_STATE = {
+    NONE:0,
+    CREATE:1,
+    INSERT:2,
+    MODIFY:3,
+  }
+
+  const MOUSE_STATE = {
+    DEFAULT:0,
+    DRAG : 1
+  }
+
+  const PATH_STATE = {
+    NONE:0,
+    ACTIVE:1,
+    HOVERED:2,
+    SELECTED:3
+  }
+
 /**
  * CONTROL POINT
  * 
@@ -191,7 +215,7 @@ class Path{
 
     this.m_points = [];
     this.m_isClosed = isClosed  
-
+    
   }
 
   updateSelectedEndPoint(ep) {
@@ -260,6 +284,7 @@ class Loonk {
     this.m_paths = [];
     this.m_path = null;
 
+
   }
     start () {
   
@@ -278,22 +303,27 @@ class Loonk {
       // // Presets
       this.m_drawing = false   
       this.m_drawEnded = true;
+
+      this.m_drawState = DRAW_STATE.NONE;
+      this.m_pathState = PATH_STATE.SELECTED; // select the current path for edition
     
     }
 
     initPath()
     {
+
+      // States
+      this.m_drawState = DRAW_STATE.CREATE;
+      this.m_mouseState = MOUSE_STATE.DEFAULT;
+      this.m_pathState = PATH_STATE.ACTIVE;
   
       this.m_drawing = true   
       this.m_drawEnded = false   
-      this.m_dragging = false   
       this.m_editCpBalance = false  
       this.m_isNewEndPoint = false   
       this.m_currentSelectedPoint = null   
-      this.m_futureSelectedPoint = null   
       this.m_draggingControlPoint = null   
       this.m_pathStarted = false;
-      this.m_portion = false;
       this.m_currentHoverPoint = null;
       this.m_newPointInsertIndex = -1;
       this.m_newPointPrev = null;
@@ -340,28 +370,27 @@ class Loonk {
 
       let pos = this.positionToCanvas(e.clientX, e.clientY)
       let selectedPath = this.getSelectedPath()
-  
-      this.m_dragging = true
+      
+      this.m_mouseState = MOUSE_STATE.DRAG;
+
       this.m_isNewEndPoint = false
       this.m_draggingControlPoint = false
       this.m_currentSelectedPoint = this.getPoint(e);
       
-      if(!this.m_drawing && this.m_newPointInsertIndex != -1)
+      if(this.m_drawState == DRAW_STATE.INSERT)
       {
         this.insertNewPointToBezier()
-
-        // console.log(this.getControlPoints(this.m_newPointPrev, this.m_newPointPrev.cp0, this.m_newPointPrev.cp0, this.m_newPointNext, this.m_currentHoverPoint))
-
-        console.log("INSERTED")
       }
 
-      
+
+      // UI Selection -------------------------------------------
       if(!this.isControlPoint(this.m_currentSelectedPoint))
         this.updateSelectedEndPoint(this.m_currentSelectedPoint)
-      
+      //---------------------------------------------------------
 
 
-      if(this.m_currentSelectedPoint ){
+      if(this.m_currentSelectedPoint )
+      {
         // if the endPoint exist
         this.m_currentSelectedPoint.selected = true;
   
@@ -378,9 +407,11 @@ class Loonk {
             // close path
             this.closePath()
         }
-      } else {
+      } 
+      else 
+      {
 
-          if(!this.m_drawing) return;
+          if(this.m_drawState != DRAW_STATE.CREATE) return;
 
           this.m_currentSelectedPoint = this.createEndPoint(pos.x, pos.y) // First Point(or point n)
           this.m_isNewEndPoint = true;
@@ -392,7 +423,10 @@ class Loonk {
             this.m_path.m_points.push(this.m_currentSelectedPoint)
           }
       }
+
+
       this.render()
+
     }
   
     onMouseMove(e) {
@@ -404,67 +438,76 @@ class Loonk {
       if(!this.m_path.m_isClosed)
         this.setCursor("pen")
 
-
-      if(this.m_drawing && this.m_currentSelectedPoint)
+      if(e.buttons != 1) 
       {
-        var prev_ep = this.m_path.m_points.at(-1);
-        var next_ep = this.createEndPoint(pos.x, pos.y) // Next Point(or point n+1)
+             
+        // Next Endpoint prediction logic
+        if(this.m_drawState == DRAW_STATE.CREATE && this.m_currentSelectedPoint)
+        {
+          var prev_ep = this.m_path.m_points.at(-1);
+          var next_ep = this.createEndPoint(pos.x, pos.y) // Next Point(or point n+1)
 
-        this.updatePredictorPath(prev_ep, next_ep);
+          this.updatePredictorPath(prev_ep, next_ep);
+        }
+
+        // if(this.m_drawEnded)
+        if(this.m_pathState ==  PATH_STATE.SELECTED)
+        {
+          this.hoverAtDist(pos.x, pos.y)
+        }
+
       }
+      else
+      {
+
+        if(this.m_mouseState != MOUSE_STATE.DRAG) return;
+
+        if(this.m_isNewEndPoint){
+            csp.cp1.x = pos.x
+            csp.cp1.y = pos.y
     
+            csp.cp0.x = csp.x * 2 - pos.x
+            csp.cp0.y = csp.y * 2 - pos.y
+        } else if (this.m_draggingControlPoint){
+            // Dragging controlPoint
 
-      if(this.m_drawEnded)
-      {
-        this.hoverAtDist(pos.x, pos.y)
+            if(this.m_editCpBalance){
+                csp.cpBalance = false
+            }
+            this.m_draggingControlPoint.x = pos.x
+            this.m_draggingControlPoint.y = pos.y
+
+            csp.ep.calculateControlPoint(pos.x, pos.y, this.m_draggingControlPoint)
+
+        } else if(this.m_currentSelectedPoint){
+
+            this.setCursor("arrow")
+
+            // Dragging endpoint
+            let offset = {
+              x: pos.x - csp.x,
+              y: pos.y - csp.y
+            }
+            csp.x = pos.x
+            csp.y = pos.y
+    
+            csp.cp1.x += offset.x
+            csp.cp1.y += offset.y
+            csp.cp0.x += offset.x
+            csp.cp0.y += offset.y
+
+        }
+  
+        this.render()
+
       }
 
-      if(!this.m_dragging) {
-        return
-      }
-  
-
-
-      if(this.m_isNewEndPoint){
-          csp.cp1.x = pos.x
-          csp.cp1.y = pos.y
-  
-          csp.cp0.x = csp.x * 2 - pos.x
-          csp.cp0.y = csp.y * 2 - pos.y
-      } else if (this.m_draggingControlPoint){
-          // Dragging controlPoint
-
-          if(this.m_editCpBalance){
-              csp.cpBalance = false
-          }
-          this.m_draggingControlPoint.x = pos.x
-          this.m_draggingControlPoint.y = pos.y
-
-          csp.ep.calculateControlPoint(pos.x, pos.y, this.m_draggingControlPoint)
-
-      } else if(this.m_currentSelectedPoint){
-
-          this.setCursor("arrow")
-
-          // Dragging endpoint
-          let offset = {
-            x: pos.x - csp.x,
-            y: pos.y - csp.y
-          }
-          csp.x = pos.x
-          csp.y = pos.y
-  
-          csp.cp1.x += offset.x
-          csp.cp1.y += offset.y
-          csp.cp0.x += offset.x
-          csp.cp0.y += offset.y
-
-      }
-      this.render()
+      
     }
     onMouseUp(e) { 
 
-      this.m_dragging = false
+      this.m_mouseState = MOUSE_STATE.DEFAULT;
+
       if(this.m_draggingControlPoint){
         if(this.m_draggingControlPoint.opposite) {
           delete this.m_draggingControlPoint.opposite.staticDistance
@@ -567,12 +610,20 @@ class Loonk {
         }
       }
     
-      if (closestPointIndex !== -1) { 
+      if (closestPointIndex !== -1) 
+      { 
         this.createHelperPoint(p.x, p.y);
         this.getInsertionIndex(p);
-      } else {
+
+        this.m_drawState = DRAW_STATE.INSERT;
+      } 
+      else 
+      {
         this.removeHelperPoint();
         this.removeHelperPath();
+
+        this.m_drawState = DRAW_STATE.CREATE;
+
       }
     }
 
@@ -657,8 +708,6 @@ class Loonk {
           insertIndex = nextI;
           portion.setAttribute("stroke", POINT_COLOR)
           portion.setAttribute("stroke-width", 2.5)
-
-          this.m_portion = portion;
 
           // Set refs for later
           this.m_newPointPrev = p;
@@ -786,8 +835,6 @@ class Loonk {
 
       this.m_controls.appendChild(point);
 
-   
-
     }
 
     removeHelperPoint()
@@ -859,6 +906,7 @@ class Loonk {
       basePath.removeAttribute("id");
       basePath.classList.replace(LOONK_PATH_CLASS, LOONK_PATH_PREDICTOR_CLASS);
       basePath.setAttribute("stroke-width", 1)
+      basePath.setAttribute("stroke", PREDICTOR_COLOR)
       basePath.setAttribute("stroke-dasharray", "4 3")
 
       return basePath;
@@ -974,7 +1022,8 @@ class Loonk {
         d += this.createBezier(prev_ep, ep)
         this.m_currentPath.setAttribute("d", d)
 
-        if(this.m_drawEnded)
+        // if(this.m_drawEnded)
+        if(this.m_pathState == PATH_STATE.SELECTED)
         {
           // Remove predictor path from DOM
           this.removePredictorPath();

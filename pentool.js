@@ -633,8 +633,12 @@ class Loonk {
 
         this.m_drawState = DRAW_STATE.INSERT;
 
-        if(_target.classList.contains(END_POINT_CLASS))
+        // Check if the cursor is on a endpoint/controlpoint
+        if(_target.classList.contains(END_POINT_CLASS) || _target.classList.contains(CONTROL_POINT_CLASS))
+        {
           this.m_drawState = DRAW_STATE.MODIFY;
+          this.removeHelperPoint();
+        }
 
       } 
       else 

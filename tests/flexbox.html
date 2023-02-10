@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+
+
+    <svg id="container" width="800" height="600" style="border: solid gray">
+        <rect class="item" width="50" height="50"></rect>
+        <rect class="item" width="50" height="50"></rect>
+        <rect class="item" width="50" height="50"></rect>
+        <rect class="item" width="50" height="50"></rect>
+        <rect class="item" width="50" height="50"></rect>
+        <rect class="item" width="50" height="50"></rect> 
+    </svg>
+
+    <script>
+        const container = document.getElementById("container");
+        const items = document.querySelectorAll(".item");
+
+        const columnWidth = 70;
+        const rowHeight = 70;
+
+        for (let i = 0; i < items.length; i++) {
+            let x = (i % 2) * columnWidth;
+            let y = Math.floor(i / 2) * rowHeight;
+
+            items[i].setAttribute("x", x);
+            items[i].setAttribute("y", y);
+        }
+    </script>
+
+
+</body>
+
+</html>

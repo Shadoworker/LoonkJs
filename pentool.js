@@ -401,11 +401,10 @@ class Loonk {
       {
         if(CONTROL_DOWN && this.m_currentSelectedPoint) // Pressing Ctrl Key and selected point
         {
-          if(this.isEndPoint(this.m_currentSelectedPoint))
+          var elem = e.target;
+          if(this.isEndPoint(elem))
           {
-            var pIndex = this.getPointIndex(this.m_currentSelectedPoint);
-            console.log(pIndex)
-            this.pointToCurve(pIndex);
+            this.pointToCurve(elem);
           }
           
         }
@@ -842,11 +841,11 @@ class Loonk {
       return this.m_path.m_points.findIndex(p=>(p.x == _point.x && p.y == _point.y));
     }
 
-    pointToCurve(_pointIndex)
+    pointToCurve(_elem)
     {
 
-      var point = this.m_path.m_points[_pointIndex];
-
+      var _pointIndex = this.m_path.m_points.findIndex(p=>p.element == _elem)
+      var point = this.m_path.m_points[_pointIndex]
       // Manage prev and next later 
       var prevIndex = (_pointIndex-1); 
       var nextIndex = (_pointIndex+1); 
@@ -1124,9 +1123,13 @@ class Loonk {
   
     isEndPoint(_point)
     {
-      if(_point)
+      if(!(_point instanceof SVGCircleElement))
       {
         return (_point.element.classList.contains(END_POINT_CLASS))
+      }
+      else if(_point instanceof SVGCircleElement)
+      {
+        return _point.classList.contains(END_POINT_CLASS)
       }
       return false;
     }

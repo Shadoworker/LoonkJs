@@ -401,8 +401,13 @@ class Loonk {
       {
         if(CONTROL_DOWN && this.m_currentSelectedPoint) // Pressing Ctrl Key and selected point
         {
+          if(this.isEndPoint(this.m_currentSelectedPoint))
+          {
             var pIndex = this.getPointIndex(this.m_currentSelectedPoint);
-            this.pointToCurve(pIndex);  
+            console.log(pIndex)
+            this.pointToCurve(pIndex);
+          }
+          
         }
       }
       
@@ -839,19 +844,24 @@ class Loonk {
 
     pointToCurve(_pointIndex)
     {
+
       var point = this.m_path.m_points[_pointIndex];
 
       // Manage prev and next later 
-      var prevIndex = (_pointIndex-1); if(prevIndex < 0) prevIndex = _pointIndex;
-      var nextIndex = (_pointIndex+1); if(nextIndex > (this.m_path.m_points.length-1)) nextIndex = (this.m_path.m_points.length-1);
+      var prevIndex = (_pointIndex-1); 
+      var nextIndex = (_pointIndex+1); 
+
+      if(prevIndex < 0) prevIndex = _pointIndex;
+      if(nextIndex > (this.m_path.m_points.length-1)) nextIndex = (this.m_path.m_points.length-1);
+      
       // ---
       var prevPoint = {...this.m_path.m_points[prevIndex]};
       var nextPoint = {...this.m_path.m_points[nextIndex]};
  
       // Switcher 
-      var pptmp = {...prevPoint};
-      prevPoint.x = nextPoint.x;
-      nextPoint.x = pptmp.x;
+      // var pptmp = {...prevPoint};
+      // prevPoint.x = nextPoint.x;
+      // nextPoint.x = pptmp.x;
  
       // Get line equation coef-dir (m) y=mx+p of the side to side points ()
       var m = (nextPoint.y - prevPoint.y) / (nextPoint.x - prevPoint.x);
@@ -879,10 +889,10 @@ class Loonk {
       var nextIntery = mnext * nextInterx - pnext;
 
       // ----------------------------------------------------------
-      var cps =   {
-                    cp0 : { x : -(prevInterx), y : -(prevIntery)},
-                    cp1 : { x : -(nextInterx), y : -(nextIntery)}
-                  }
+      var cps = {
+                  cp0 : { x : -(prevInterx), y : -(prevIntery)},
+                  cp1 : { x : -(nextInterx), y : -(nextIntery)}
+                }
 
       // Get shortest distance from central point with processed control points and get the needed control point
       var d0 = this.distanceOfPoint(point.x, point.y, cps.cp0.x, cps.cp0.y);
@@ -895,14 +905,48 @@ class Loonk {
         cps.cp1 = cpImage;
       else        //keep cp1, modify cp0
         cps.cp0 = cpImage;
-        
-      // /* Update point's controls */
-      this.m_path.m_points[this.m_newPointInsertIndex].cp0.x = cps.cp1.x;
-      this.m_path.m_points[this.m_newPointInsertIndex].cp0.y = cps.cp1.y;
 
-      this.m_path.m_points[this.m_newPointInsertIndex].cp1.x = cps.cp0.x;
-      this.m_path.m_points[this.m_newPointInsertIndex].cp1.y = cps.cp0.y;
+
+      /* Update point's controls */
+      this.m_path.m_points[_pointIndex].cp0.x = cps.cp0.x;
+      this.m_path.m_points[_pointIndex].cp0.y = cps.cp0.y;
+
+      this.m_path.m_points[_pointIndex].cp1.x = cps.cp1.x;
+      this.m_path.m_points[_pointIndex].cp1.y = cps.cp1.y;
     
+      // VISUALS EXTREMITIES
+
+      // let _ext1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      // _ext1.setAttribute('cx', prevPoint.x);
+      // _ext1.setAttribute('cy', prevPoint.y);
+      // _ext1.setAttribute('r', 4);
+      // _ext1.setAttribute('fill', "yellow");
+      // this.m_svg.appendChild(_ext1);
+        
+      // let _ext2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      // _ext2.setAttribute('cx', nextPoint.x);
+      // _ext2.setAttribute('cy', nextPoint.y);
+      // _ext2.setAttribute('r', 4);
+      // _ext2.setAttribute('fill', "orange");
+      // this.m_svg.appendChild(_ext2);
+
+
+      // VISUALS CPS
+            
+      // let _cp1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      // _cp1.setAttribute('cx', cps.cp0.x);
+      // _cp1.setAttribute('cy', cps.cp0.y);
+      // _cp1.setAttribute('r', 4);
+      // _cp1.setAttribute('fill', "green");
+      // this.m_svg.appendChild(_cp1);
+        
+      // let _cp2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      // _cp2.setAttribute('cx', cps.cp1.x);
+      // _cp2.setAttribute('cy', cps.cp1.y);
+      // _cp2.setAttribute('r', 4);
+      // _cp2.setAttribute('fill', "red");
+      // this.m_svg.appendChild(_cp2);
+
       // // Render
       this.render()
 
@@ -1078,6 +1122,15 @@ class Loonk {
       return null
     }
   
+    isEndPoint(_point)
+    {
+      if(_point)
+      {
+        return (_point.element.classList.contains(END_POINT_CLASS))
+      }
+      return false;
+    }
+
     isControlPoint(_point)
     {
       if(_point)

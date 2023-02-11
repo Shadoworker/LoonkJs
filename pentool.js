@@ -399,7 +399,6 @@ class Loonk {
       // On existing point and MODIFY mode : Transform into curve/straight point
       if(this.m_drawState == DRAW_STATE.MODIFY)
       {
-        console.log(CONTROL_DOWN)
         if(CONTROL_DOWN && this.m_currentSelectedPoint) // Pressing Ctrl Key and selected point
         {
             var pIndex = this.getPointIndex(this.m_currentSelectedPoint);
@@ -841,10 +840,19 @@ class Loonk {
     pointToCurve(_pointIndex)
     {
       var point = this.m_path.m_points[_pointIndex];
-      // TODO : Manage prev and next later 
-      var prevPoint = this.m_path.m_points[_pointIndex-1];
-      var nextPoint = this.m_path.m_points[_pointIndex+1];
 
+      // Manage prev and next later 
+      var prevIndex = (_pointIndex-1); if(prevIndex < 0) prevIndex = _pointIndex;
+      var nextIndex = (_pointIndex+1); if(nextIndex > (this.m_path.m_points.length-1)) nextIndex = (this.m_path.m_points.length-1);
+      // ---
+      var prevPoint = {...this.m_path.m_points[prevIndex]};
+      var nextPoint = {...this.m_path.m_points[nextIndex]};
+ 
+      // Switcher 
+      var pptmp = {...prevPoint};
+      prevPoint.x = nextPoint.x;
+      nextPoint.x = pptmp.x;
+ 
       // Get line equation coef-dir (m) y=mx+p of the side to side points ()
       var m = (nextPoint.y - prevPoint.y) / (nextPoint.x - prevPoint.x);
       // --------------------------------------------------------
@@ -852,20 +860,15 @@ class Loonk {
       var m_ = m;
       var p = point.y - (m_ * point.x);
       // --------------------------------------------------------
-      // --------------------------------------------------------
-      // Get the line eq of the perpendicular passing by prevPoint
-      // As they are perp mprev = -1/m
+      // Get the line eq of the perpendicular passing by prevPoint : As they are perp mprev = -1/m
       var mprev = -1/m_;
       // Now Let's find it's b using prevPoint values
       var pprev = prevPoint.y - (mprev * prevPoint.x);
-      // ----------------------------------------------------------
       // --------------------------------------------------------
-      // Get the line eq of the perpendicular passing by nextPoint
-      // As they are perp mnext = -1/m
+      // Get the line eq of the perpendicular passing by nextPoint : As they are perp mnext = -1/m
       var mnext = -1/m_;
       // Now Let's find it's b using nextPoint values
       var pnext = nextPoint.y - (mnext * nextPoint.x);
-      // ----------------------------------------------------------
       // ----------------------------------------------------------
       // Now Get the intersections Left and Right
       // 1 :
@@ -876,19 +879,29 @@ class Loonk {
       var nextIntery = mnext * nextInterx - pnext;
 
       // ----------------------------------------------------------
-      var cps = 
-        {
-            cp0 : { x : -(prevInterx), y : -(prevIntery)},
-            cp1 : { x : -(nextInterx), y : -(nextIntery)}
-        }
+      var cps =   {
+                    cp0 : { x : -(prevInterx), y : -(prevIntery)},
+                    cp1 : { x : -(nextInterx), y : -(nextIntery)}
+                  }
 
+      // Get shortest distance from central point with processed control points and get the needed control point
+      var d0 = this.distanceOfPoint(point.x, point.y, cps.cp0.x, cps.cp0.y);
+      var d1 = this.distanceOfPoint(point.x, point.y, cps.cp1.x, cps.cp1.y);
+      var cp = d0 < d1 ? {...cps.cp0} : {...cps.cp1};
+      // Get the image of the nearest control point then
+      var cpImage = { x : (2*point.x - cp.x), y : (2*point.y - cp.y)};
 
+      if(d0 < d1) //keep cp0, modify cp1
+        cps.cp1 = cpImage;
+      else        //keep cp1, modify cp0
+        cps.cp0 = cpImage;
+        
       // /* Update point's controls */
-      this.m_path.m_points[this.m_newPointInsertIndex].cp0.x = cps.cp0.x;
-      this.m_path.m_points[this.m_newPointInsertIndex].cp0.y = cps.cp0.y;
+      this.m_path.m_points[this.m_newPointInsertIndex].cp0.x = cps.cp1.x;
+      this.m_path.m_points[this.m_newPointInsertIndex].cp0.y = cps.cp1.y;
 
-      this.m_path.m_points[this.m_newPointInsertIndex].cp1.x = cps.cp1.x;
-      this.m_path.m_points[this.m_newPointInsertIndex].cp1.y = cps.cp1.y;
+      this.m_path.m_points[this.m_newPointInsertIndex].cp1.x = cps.cp0.x;
+      this.m_path.m_points[this.m_newPointInsertIndex].cp1.y = cps.cp0.y;
     
       // // Render
       this.render()

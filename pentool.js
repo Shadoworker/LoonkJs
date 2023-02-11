@@ -404,7 +404,7 @@ class Loonk {
           var elem = e.target;
           if(this.isEndPoint(elem))
           {
-            this.pointToCurve(elem);
+            this.toggleExtremity(elem);
           }
           
         }
@@ -841,10 +841,24 @@ class Loonk {
       return this.m_path.m_points.findIndex(p=>(p.x == _point.x && p.y == _point.y));
     }
 
-    pointToCurve(_elem)
+    toggleExtremity(_elem)
     {
-
       var _pointIndex = this.m_path.m_points.findIndex(p=>p.element == _elem)
+      var point = this.m_path.m_points[_pointIndex];
+
+      if(this.isCorner(point))
+      {
+        this.cornerToCurve(_pointIndex)
+      }
+      else
+      {
+        this.curveToCorner(_pointIndex);
+      }
+
+    }
+
+    cornerToCurve(_pointIndex)
+    {
       var point = this.m_path.m_points[_pointIndex]
       // Manage prev and next later 
       var prevIndex = (_pointIndex-1); 
@@ -864,7 +878,6 @@ class Loonk {
       }
 
       var cps = {}; // final control points
-      
       // ---
       var prevPoint = {...this.m_path.m_points[prevIndex]};
       var nextPoint = {...this.m_path.m_points[nextIndex]};
@@ -973,14 +986,52 @@ class Loonk {
       // _cp2.setAttribute('fill', "red");
       // this.m_svg.appendChild(_cp2);
 
-      // // Render
-      this.render()
 
     }
  
-    curveToPoint(_pointIndex)
+    curveToCorner(_pointIndex)
     {
-      
+
+      var point = this.m_path.m_points[_pointIndex]
+      // Manage prev and next later 
+      var prevIndex = (_pointIndex-1); 
+      var nextIndex = (_pointIndex+1); 
+
+      var extremityDir = 0 ; // Used to handle extremity points
+
+      if(prevIndex < 0) 
+      {
+        prevIndex = _pointIndex;
+        extremityDir = 1;
+      }
+      if(nextIndex > (this.m_path.m_points.length-1))
+      {
+        nextIndex = (this.m_path.m_points.length-1);
+        extremityDir = -1;
+      }
+
+      var cps = {}; // final control points
+      // ---
+      // var prevPoint = {...this.m_path.m_points[prevIndex]};
+      // var nextPoint = {...this.m_path.m_points[nextIndex]};
+
+
+      /* Update point's controls */
+      this.m_path.m_points[_pointIndex].cp0.x = point.x;
+      this.m_path.m_points[_pointIndex].cp0.y = point.y;
+
+      this.m_path.m_points[_pointIndex].cp1.x = point.x;
+      this.m_path.m_points[_pointIndex].cp1.y = point.y;
+
+ 
+    }
+
+    isCorner(_point)
+    {
+      if(((_point.x == _point.cp0.x) && (_point.x == _point.cp1.x)) && ((_point.y == _point.cp0.y) && (_point.y == _point.cp1.y)))
+        return true;
+
+      return false;
     }
 
     createSVGPoint(_x, _y)

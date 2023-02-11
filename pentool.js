@@ -26,6 +26,7 @@
     CREATE:1,
     INSERT:2,
     MODIFY:3,
+    TRANSFORM : 4
   }
 
   const MOUSE_STATE = {
@@ -39,6 +40,15 @@
     HOVERED:2,
     SELECTED:3
   }
+
+
+  /** KEYS  */
+  var CONTROL_DOWN = false;
+  var SHIFT_DOWN = false;
+  var ALT_DOWN = false;
+
+ ////////////////////////
+
 
 /**
  * CONTROL POINT
@@ -380,11 +390,23 @@ class Loonk {
       this.m_draggingControlPoint = false
       this.m_currentSelectedPoint = this.getPoint(e);
       
+      // On path and INSERT mode : Insert new point on path
       if(this.m_drawState == DRAW_STATE.INSERT)
       {
         this.insertNewPointToBezier()
       }
 
+      // On existing point and MODIFY mode : Transform into curve/straight point
+      if(this.m_drawState == DRAW_STATE.MODIFY)
+      {
+        console.log(CONTROL_DOWN)
+        if(CONTROL_DOWN && this.m_currentSelectedPoint) // Pressing Ctrl Key and selected point
+        {
+            var pIndex = this.getPointIndex(this.m_currentSelectedPoint);
+            this.pointToCurve(pIndex);  
+        }
+      }
+      
 
       // UI Selection -------------------------------------------
       if(!this.isControlPoint(this.m_currentSelectedPoint))
@@ -544,6 +566,17 @@ class Loonk {
           this.render()
           break;
       }
+
+      if(e.which == "17") 
+        CONTROL_DOWN = true; // Ctrl down
+
+    }
+
+    onKeyUp(e) {
+
+      if(e.which == "17")
+        CONTROL_DOWN = false; // Ctrl up
+
     }
     // active the canvas's eventListner
     active() {
@@ -552,12 +585,14 @@ class Loonk {
         mousedown(e) { that.onMouseDown(e) },
         mousemove(e) { that.onMouseMove(e) },
         mouseup(e) { that.onMouseUp(e) },
-        keydown(e) { that.onKeyDown(e) }
+        keydown(e) { that.onKeyDown(e) },
+        keyup(e) { that.onKeyUp(e) }
     };
       this.m_svg.addEventListener('mousedown', listeners.mousedown, false)
       this.m_svg.addEventListener('mousemove', listeners.mousemove, false)
       this.m_svg.addEventListener('mouseup', listeners.mouseup, false)
       document.addEventListener('keydown', listeners.keydown, false)
+      document.addEventListener('keyup', listeners.keyup, false)
     }
   
     distanceOfPoint(x1, y1, x2, y2) {
@@ -791,10 +826,80 @@ class Loonk {
         pp : {cp1 : {x:B0[0], y:B0[1]}}
       }
 
+      let newPath = `M${startPoint.x} ${startPoint.y} C${B0[0]} ${B0[1]},${B01[0]} ${B01[1]},${B012[0]} ${B012[1]} C${B12[0]} ${B12[1]},${B2[0]} ${B2[1]},${endPoint.x} ${endPoint.y}`;
+
+      console.log(newPath)
+
       return result;
     }
 
+    getPointIndex(_point) // pos
+    {
+      return this.m_path.m_points.findIndex(p=>(p.x == _point.x && p.y == _point.y));
+    }
+
+    pointToCurve(_pointIndex)
+    {
+      var point = this.m_path.m_points[_pointIndex];
+      // TODO : Manage prev and next later 
+      var prevPoint = this.m_path.m_points[_pointIndex-1];
+      var nextPoint = this.m_path.m_points[_pointIndex+1];
+
+      // Get line equation coef-dir (m) y=mx+p of the side to side points ()
+      var m = (nextPoint.y - prevPoint.y) / (nextPoint.x - prevPoint.x);
+      // --------------------------------------------------------
+      // As they are parallel so they share the same (m), let's now find the (p) by using our targeted point values
+      var m_ = m;
+      var p = point.y - (m_ * point.x);
+      // --------------------------------------------------------
+      // --------------------------------------------------------
+      // Get the line eq of the perpendicular passing by prevPoint
+      // As they are perp mprev = -1/m
+      var mprev = -1/m_;
+      // Now Let's find it's b using prevPoint values
+      var pprev = prevPoint.y - (mprev * prevPoint.x);
+      // ----------------------------------------------------------
+      // --------------------------------------------------------
+      // Get the line eq of the perpendicular passing by nextPoint
+      // As they are perp mnext = -1/m
+      var mnext = -1/m_;
+      // Now Let's find it's b using nextPoint values
+      var pnext = nextPoint.y - (mnext * nextPoint.x);
+      // ----------------------------------------------------------
+      // ----------------------------------------------------------
+      // Now Get the intersections Left and Right
+      // 1 :
+      var prevInterx = (p - pprev) / (m_ - mprev)
+      var prevIntery = mprev * prevInterx - pprev;
+      // 2 :
+      var nextInterx = (p - pnext) / (m_ - mnext)
+      var nextIntery = mnext * nextInterx - pnext;
+
+      // ----------------------------------------------------------
+      var cps = 
+        {
+            cp0 : { x : -(prevInterx), y : -(prevIntery)},
+            cp1 : { x : -(nextInterx), y : -(nextIntery)}
+        }
+
+
+      // /* Update point's controls */
+      this.m_path.m_points[this.m_newPointInsertIndex].cp0.x = cps.cp0.x;
+      this.m_path.m_points[this.m_newPointInsertIndex].cp0.y = cps.cp0.y;
+
+      this.m_path.m_points[this.m_newPointInsertIndex].cp1.x = cps.cp1.x;
+      this.m_path.m_points[this.m_newPointInsertIndex].cp1.y = cps.cp1.y;
+    
+      // // Render
+      this.render()
+
+    }
  
+    curveToPoint(_pointIndex)
+    {
+      
+    }
+
     createSVGPoint(_x, _y)
     {
       var p = this.m_svg.createSVGPoint()

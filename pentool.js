@@ -850,61 +850,88 @@ class Loonk {
       var prevIndex = (_pointIndex-1); 
       var nextIndex = (_pointIndex+1); 
 
-      if(prevIndex < 0) prevIndex = _pointIndex;
-      if(nextIndex > (this.m_path.m_points.length-1)) nextIndex = (this.m_path.m_points.length-1);
+      var extremityDir = 0 ; // Used to handle extremity points
+
+      if(prevIndex < 0) 
+      {
+        prevIndex = _pointIndex;
+        extremityDir = 1;
+      }
+      if(nextIndex > (this.m_path.m_points.length-1))
+      {
+        nextIndex = (this.m_path.m_points.length-1);
+        extremityDir = -1;
+      }
+
+      var cps = {}; // final control points
       
       // ---
       var prevPoint = {...this.m_path.m_points[prevIndex]};
       var nextPoint = {...this.m_path.m_points[nextIndex]};
  
-      // Switcher 
-      // var pptmp = {...prevPoint};
-      // prevPoint.x = nextPoint.x;
-      // nextPoint.x = pptmp.x;
- 
-      // Get line equation coef-dir (m) y=mx+p of the side to side points ()
-      var m = (nextPoint.y - prevPoint.y) / (nextPoint.x - prevPoint.x);
-      // --------------------------------------------------------
-      // As they are parallel so they share the same (m), let's now find the (p) by using our targeted point values
-      var m_ = m;
-      var p = point.y - (m_ * point.x);
-      // --------------------------------------------------------
-      // Get the line eq of the perpendicular passing by prevPoint : As they are perp mprev = -1/m
-      var mprev = -1/m_;
-      // Now Let's find it's b using prevPoint values
-      var pprev = prevPoint.y - (mprev * prevPoint.x);
-      // --------------------------------------------------------
-      // Get the line eq of the perpendicular passing by nextPoint : As they are perp mnext = -1/m
-      var mnext = -1/m_;
-      // Now Let's find it's b using nextPoint values
-      var pnext = nextPoint.y - (mnext * nextPoint.x);
-      // ----------------------------------------------------------
-      // Now Get the intersections Left and Right
-      // 1 :
-      var prevInterx = (p - pprev) / (m_ - mprev)
-      var prevIntery = mprev * prevInterx - pprev;
-      // 2 :
-      var nextInterx = (p - pnext) / (m_ - mnext)
-      var nextIntery = mnext * nextInterx - pnext;
+      if(extremityDir == 0) // Normal point with inf and sup extremity
+      {
 
-      // ----------------------------------------------------------
-      var cps = {
-                  cp0 : { x : -(prevInterx), y : -(prevIntery)},
-                  cp1 : { x : -(nextInterx), y : -(nextIntery)}
-                }
+        // Get line equation coef-dir (m) y=mx+p of the side to side points ()
+        var m = (nextPoint.y - prevPoint.y) / (nextPoint.x - prevPoint.x);
+        // --------------------------------------------------------
+        // As they are parallel so they share the same (m), let's now find the (p) by using our targeted point values
+        var m_ = m;
+        var p = point.y - (m_ * point.x);
+        // --------------------------------------------------------
+        // Get the line eq of the perpendicular passing by prevPoint : As they are perp mprev = -1/m
+        var mprev = -1/m_;
+        // Now Let's find it's b using prevPoint values
+        var pprev = prevPoint.y - (mprev * prevPoint.x);
+        // --------------------------------------------------------
+        // Get the line eq of the perpendicular passing by nextPoint : As they are perp mnext = -1/m
+        var mnext = -1/m_;
+        // Now Let's find it's b using nextPoint values
+        var pnext = nextPoint.y - (mnext * nextPoint.x);
+        // ----------------------------------------------------------
+        // Now Get the intersections Left and Right
+        // 1 :
+        var prevInterx = (p - pprev) / (m_ - mprev)
+        var prevIntery = mprev * prevInterx - pprev;
+        // 2 :
+        var nextInterx = (p - pnext) / (m_ - mnext)
+        var nextIntery = mnext * nextInterx - pnext;
 
-      // Get shortest distance from central point with processed control points and get the needed control point
-      var d0 = this.distanceOfPoint(point.x, point.y, cps.cp0.x, cps.cp0.y);
-      var d1 = this.distanceOfPoint(point.x, point.y, cps.cp1.x, cps.cp1.y);
-      var cp = d0 < d1 ? {...cps.cp0} : {...cps.cp1};
-      // Get the image of the nearest control point then
-      var cpImage = { x : (2*point.x - cp.x), y : (2*point.y - cp.y)};
+        // ----------------------------------------------------------
+        cps = {
+                cp0 : { x : -(prevInterx), y : -(prevIntery)},
+                cp1 : { x : -(nextInterx), y : -(nextIntery)}
+              }
 
-      if(d0 < d1) //keep cp0, modify cp1
-        cps.cp1 = cpImage;
-      else        //keep cp1, modify cp0
-        cps.cp0 = cpImage;
+        // Get shortest distance from central point with processed control points and get the needed control point
+        var d0 = this.distanceOfPoint(point.x, point.y, cps.cp0.x, cps.cp0.y);
+        var d1 = this.distanceOfPoint(point.x, point.y, cps.cp1.x, cps.cp1.y);
+        var cp = d0 < d1 ? {...cps.cp0} : {...cps.cp1};
+        // Get the image of the nearest control point then
+        var cpImage = { x : (2*point.x - cp.x), y : (2*point.y - cp.y)};
 
+        if(d0 < d1) //keep cp0, modify cp1
+          cps.cp1 = cpImage;
+        else        //keep cp1, modify cp0
+          cps.cp0 = cpImage;
+
+      }
+      else // We just get the middle of the path as its control point
+      {
+        var extremityPoint = this.m_path.m_points[_pointIndex+extremityDir];
+        // Get middle point
+        var midPoint = {x : (point.x+extremityPoint.x)/2, y: (point.y+extremityPoint.y)/2 }
+
+        cps = {
+          cp0 : { x : point.cp0.x, y :  point.cp0.y },
+          cp1 : { x : point.cp1.x, y :  point.cp1.y }
+        }
+
+        if(extremityDir == 1) cps.cp1 = midPoint;
+        else                  cps.cp0 = midPoint;
+
+      }
+      
 
       /* Update point's controls */
       this.m_path.m_points[_pointIndex].cp0.x = cps.cp0.x;

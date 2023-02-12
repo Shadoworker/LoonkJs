@@ -9,9 +9,10 @@
   const CONTROL_POINT_CLASS ='loonk_controls_box_controlpoint';
   // Colors
   const POINT_COLOR = "#DA2F74";
+  const HANDLE_COLOR = "#50B5AD";
   const POINT_BORDER_COLOR = "#FFFFFF";
   const LINE_COLOR = "#E193B2";
-  const PREDICTOR_COLOR = "#4E4E4E";
+  const PREDICTOR_COLOR = "#DA2F74A1";
 
 
   // Presets 
@@ -75,8 +76,8 @@
       svgControlPoint.setAttribute('cx', this.x);
       svgControlPoint.setAttribute('cy', this.y);
       svgControlPoint.setAttribute('r', 3);
-      svgControlPoint.setAttribute('fill', POINT_COLOR+'66');
-      svgControlPoint.setAttribute('stroke', POINT_COLOR);
+      svgControlPoint.setAttribute('fill', HANDLE_COLOR+'66');
+      svgControlPoint.setAttribute('stroke', HANDLE_COLOR);
       svgControlPoint.setAttribute('stroke-width', 1);
       svgControlPoint.classList.add(CONTROL_POINT_CLASS)
 
@@ -170,7 +171,7 @@ const endpointStyle = {
     line(x1, y1, x2, y2){
      
       let line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('stroke', LINE_COLOR);
+      line.setAttribute('stroke', HANDLE_COLOR);
       line.setAttribute('x1', x1);
       line.setAttribute('y1', y1);
       line.setAttribute('x2', x2);
@@ -494,7 +495,7 @@ class Loonk {
 
         if(this.m_mouseState != MOUSE_STATE.DRAG) return;
 
-        if(this.m_isNewEndPoint)
+        if(this.m_isNewEndPoint  && this.m_drawState != DRAW_STATE.INSERT)
         {
             csp.cp1.x = pos.x
             csp.cp1.y = pos.y
@@ -515,8 +516,9 @@ class Loonk {
             csp.ep.calculateControlPoint(pos.x, pos.y, this.m_draggingControlPoint)
 
         } 
-        else if(this.m_currentSelectedPoint)
+        else if(this.m_currentSelectedPoint && this.m_drawState != DRAW_STATE.INSERT)
         {
+
             // Dragging endpoint
 
             this.setCursor("arrow")
@@ -827,10 +829,6 @@ class Loonk {
         pp : {cp1 : {x:B0[0], y:B0[1]}}
       }
 
-      let newPath = `M${startPoint.x} ${startPoint.y} C${B0[0]} ${B0[1]},${B01[0]} ${B01[1]},${B012[0]} ${B012[1]} C${B12[0]} ${B12[1]},${B2[0]} ${B2[1]},${endPoint.x} ${endPoint.y}`;
-
-      console.log(newPath)
-
       return result;
     }
 
@@ -1051,7 +1049,7 @@ class Loonk {
       path.classList.add(LOONK_PATH_HELPER_CLASS);
       path.setAttribute("fill", "none");
       path.setAttribute("stroke", "transparent");
-      path.setAttribute("stroke-width", 1.5);
+      path.setAttribute("stroke-width", 1.2);
       path.style.pointerEvents = "none";
 
       var curve = this.createBezier(p1, p2)
@@ -1162,7 +1160,7 @@ class Loonk {
       path.classList.add(LOONK_PATH_CLASS);
       path.setAttribute("fill", "none");
       path.setAttribute("stroke", "black");
-      path.setAttribute("stroke-width", 1.5);
+      path.setAttribute("stroke-width", 1.0);
 
       
       this.m_svg.prepend(path)
@@ -1176,7 +1174,7 @@ class Loonk {
       basePath.classList.replace(LOONK_PATH_CLASS, LOONK_PATH_PREDICTOR_CLASS);
       basePath.setAttribute("stroke-width", 1)
       basePath.setAttribute("stroke", PREDICTOR_COLOR)
-      basePath.setAttribute("stroke-dasharray", "4 3")
+      basePath.setAttribute("stroke-dasharray", "4 4")
 
       return basePath;
     }

@@ -478,9 +478,7 @@ class Loonk {
         // Next Endpoint prediction logic
         if(this.m_drawState == DRAW_STATE.CREATE && this.m_currentSelectedPoint)
         {
-          var prev_ep = this.m_path.m_points.at(-1);
-          var next_ep = this.createEndPoint(pos.x, pos.y) // Next Point(or point n+1)
-          this.updatePredictorPath(prev_ep, next_ep);
+         this.setPredictor(pos)
         }
 
         // if(this.m_drawEnded)
@@ -1070,8 +1068,15 @@ class Loonk {
       var d = "M"+p1.x+ ","+p1.y + curve;
 
       this.m_predictorPath.setAttribute("d", d);
+      this.m_predictorPath.m_pos = p2;
     }
 
+    setPredictor(_pos)
+    {
+      var prev_ep = this.m_path.m_points.at(-1);
+      var next_ep = this.createEndPoint(_pos.x, _pos.y) // Next Point(or point n+1)
+      this.updatePredictorPath(prev_ep, next_ep);
+    }
 
     createHelperPoint(_x, _y)
     {
@@ -1265,7 +1270,9 @@ class Loonk {
       this.m_pathStarted = false;
       this.m_svg.querySelector('.loonk_controls_box').innerHTML = null;
 
-      
+      // Update selection
+      this.updateSelection();
+
       let len = this.m_path.m_points.length
       for(let i = 0; i < len; i++) {
         ep = this.m_path.m_points[i]
@@ -1312,6 +1319,24 @@ class Loonk {
         
         
     }
+
+    // onRemove endpoint select previous one
+    updateSelection() 
+    {
+       // SELECTION CONTROLLER
+       if(this.m_drawState == DRAW_STATE.CREATE)
+       {
+         var selected = this.m_path.m_points.findIndex(p=>p.selected);
+         if(selected == -1) // No selected item : select last one then
+         {
+           this.m_path.m_points[this.m_path.m_points.length-1].selected = true;
+
+           // Predictor
+           this.setPredictor(this.m_predictorPath.m_pos);
+         }  
+       }
+    }
+
     createBezier(prev_ep, ep)
     {
       return 'C'+ prev_ep.cp1.x + "," + prev_ep.cp1.y + " " +

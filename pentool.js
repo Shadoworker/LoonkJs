@@ -609,34 +609,78 @@ class Loonk {
       if(this.m_newPointInsertIndex == -1) // Not in path
         return;
 
-      var relativeIndex = this.getPointRelativeIndex(this.m_currentHoverPoint, this.m_newPointPrev, this.m_newPointNext);
-
       var start = this.m_newPointPrev;
       var end = this.m_newPointNext;
- 
+
+      var relativeIndex = this.getPointRelativeIndex(this.m_currentHoverPoint, start, end);
+
+      if(this.m_newPointInsertIndex == 0)
+      {
+        relativeIndex = this.getPointReverseRelativeIndex(this.m_currentHoverPoint, start, end);
+        console.log(relativeIndex)
+      }
+
+      // console.log([start, end])
+
       var result = this.splitBezier(start, start.cp1, end.cp0, end, relativeIndex);
+      console.log(result)
       // The following logic relies on "bezierCurveTo" Method logic 
       // in order to set for each point it's control points (insertedPoint and nextPoint)
-      var ei = result.ei; // Presets of the New point to insert
-      var ep = result.ep; // Presets of the Point after the new point
-      var pp = result.pp; // Presets of the Point before the new point
+      var newPoint = result.newPoint; // Presets of the New point to insert
+      var endPoint = result.endPoint; // Presets of the Point after the new point
+      var startPoint = result.startPoint; // Presets of the Point before the new point
 
       // Define new point's controls
-      var tPoint = this.createEndPoint(ei.ep.x, ei.ep.y)
-      tPoint.cp0.x = ei.cp0.x;  tPoint.cp0.y = ei.cp0.y;
-      tPoint.cp1.x = ei.cp1.x;  tPoint.cp1.y = ei.cp1.y;
+      var tPoint = this.createEndPoint(this.m_currentHoverPoint.x, this.m_currentHoverPoint.y)
+
+      tPoint.cp0.x = newPoint.cp0.x;  
+      tPoint.cp0.y = newPoint.cp0.y;
+      tPoint.cp1.x = newPoint.cp1.x;
+      tPoint.cp1.y = newPoint.cp1.y;
 
       // this.selectPath(e)
       /* insert the new point at the right index */
+      // console.log(this.m_newPointInsertIndex)
       this.m_path.m_points.splice(this.m_newPointInsertIndex, 0, tPoint);
 
       /* Update prev point's controls */
-      this.m_path.m_points[this.m_newPointInsertIndex-1].cp1.x = pp.cp1.x;
-      this.m_path.m_points[this.m_newPointInsertIndex-1].cp1.y = pp.cp1.y;
-      /* Update next point's controls */
-      this.m_path.m_points[this.m_newPointInsertIndex+1].cp0.x = ep.cp0.x;
-      this.m_path.m_points[this.m_newPointInsertIndex+1].cp0.y = ep.cp0.y;
+      // var prevIndex = this.m_path.m_points.indexOf(this.m_newPointPrev)
+      // var nextIndex = this.m_path.m_points.indexOf(this.m_newPointNext);
+      
+      var currentPos = this.m_path.m_points.indexOf(tPoint);
+      // console.log(currentPos);
 
+      var prevIndex = currentPos-1;
+      var nextIndex = currentPos+1;
+
+      if(this.m_newPointInsertIndex == 0) 
+      {
+
+        console.log({prevIndex, nextIndex})
+        console.log(this.m_path.m_points)
+        
+        prevIndex = 1;
+        nextIndex = this.m_path.m_points.length - 1; 
+
+
+        // this.m_path.m_points[currentPos].cp1.x = endPoint.cp.x;
+        // this.m_path.m_points[currentPos].cp1.y = endPoint.cp.y;
+
+        this.m_path.m_points[prevIndex].cp0.x = endPoint.cp.x;
+        this.m_path.m_points[prevIndex].cp0.y = endPoint.cp.y;
+        /* Update next point's controls */
+        this.m_path.m_points[nextIndex].cp1.x = startPoint.cp.x;
+        this.m_path.m_points[nextIndex].cp1.y = startPoint.cp.y;
+      }
+      else
+      {
+        this.m_path.m_points[prevIndex].cp1.x = startPoint.cp.x;
+        this.m_path.m_points[prevIndex].cp1.y = startPoint.cp.y;
+        /* Update next point's controls */
+        this.m_path.m_points[nextIndex].cp0.x = endPoint.cp.x;
+        this.m_path.m_points[nextIndex].cp0.y = endPoint.cp.y;
+      }
+     
       // Render
       this.render()
 
@@ -806,6 +850,18 @@ class Loonk {
 
     } 
 
+    // Get the relative index of a given point along a curve defined by two points
+    getPointReverseRelativeIndex(h, p1, p2)
+    {
+      var fulldist = this.distanceOfPoint(p1.x, p1.y, p2.x, p2.y);
+      var partialdist = this.distanceOfPoint(p1.x, p1.y, h.x, h.y);
+
+      var relativeIndex = partialdist / fulldist;
+
+      return relativeIndex;
+
+    } 
+
     // Function to split a Bézier curve into two smaller curves
     splitBezier(_startPoint, cp1, cp2, _endPoint, t=0.5) {
 
@@ -813,7 +869,6 @@ class Loonk {
       let controlPoint1 = {x:cp1.x, y:cp1.y};
       let controlPoint2 = {x:cp2.x, y:cp2.y};
       let endPoint = {x:_endPoint.x, y:_endPoint.y};
-
       
       let B0 = [(1 - t) * startPoint.x + t * controlPoint1.x, (1 - t) * startPoint.y + t * controlPoint1.y];
       let B1 = [(1 - t) * controlPoint1.x + t * controlPoint2.x, (1 - t) * controlPoint1.y + t * controlPoint2.y];
@@ -824,9 +879,9 @@ class Loonk {
 
       var result = 
       {
-        ei : {ep:{x:B012[0],    y:B012[1]},     cp0:{x:B01[0], y:B01[1]},   cp1:{x:B12[0],          y:B12[1]}},
-        ep : {ep:{x:endPoint.x, y:endPoint.y},  cp0:{x:B2[0],  y:B2[1]},    cp1:{x:_endPoint.cp1.x, y:_endPoint.cp1.y}},
-        pp : {cp1 : {x:B0[0], y:B0[1]}}
+        newPoint    : {  ep : {x:B012[0],  y:B012[1]}, cp0:{x:B01[0],  y:B01[1]},   cp1:{x:B12[0],  y:B12[1]}},
+        startPoint  : {  cp : {x:B0[0], y:B0[1]}},
+        endPoint    : {  cp : {x:B2[0], y:B2[1]}}
       }
 
       return result;
@@ -949,39 +1004,6 @@ class Loonk {
       this.m_path.m_points[_pointIndex].cp1.x = cps.cp1.x;
       this.m_path.m_points[_pointIndex].cp1.y = cps.cp1.y;
     
-      // VISUALS EXTREMITIES
-
-      // let _ext1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      // _ext1.setAttribute('cx', prevPoint.x);
-      // _ext1.setAttribute('cy', prevPoint.y);
-      // _ext1.setAttribute('r', 4);
-      // _ext1.setAttribute('fill', "yellow");
-      // this.m_svg.appendChild(_ext1);
-        
-      // let _ext2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      // _ext2.setAttribute('cx', nextPoint.x);
-      // _ext2.setAttribute('cy', nextPoint.y);
-      // _ext2.setAttribute('r', 4);
-      // _ext2.setAttribute('fill', "orange");
-      // this.m_svg.appendChild(_ext2);
-
-
-      // VISUALS CPS
-            
-      // let _cp1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      // _cp1.setAttribute('cx', cps.cp0.x);
-      // _cp1.setAttribute('cy', cps.cp0.y);
-      // _cp1.setAttribute('r', 4);
-      // _cp1.setAttribute('fill', "green");
-      // this.m_svg.appendChild(_cp1);
-        
-      // let _cp2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      // _cp2.setAttribute('cx', cps.cp1.x);
-      // _cp2.setAttribute('cy', cps.cp1.y);
-      // _cp2.setAttribute('r', 4);
-      // _cp2.setAttribute('fill', "red");
-      // this.m_svg.appendChild(_cp2);
-
 
     }
  

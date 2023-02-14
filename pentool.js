@@ -617,12 +617,10 @@ class Loonk {
       if(this.m_newPointInsertIndex == 0)
       {
         relativeIndex = this.getPointReverseRelativeIndex(this.m_currentHoverPoint, start, end);
-        console.log(relativeIndex)
       }
 
-      // console.log([start, end])
-
       var result = this.splitBezier(start, start.cp1, end.cp0, end, relativeIndex);
+
       console.log(result)
       // The following logic relies on "bezierCurveTo" Method logic 
       // in order to set for each point it's control points (insertedPoint and nextPoint)
@@ -638,37 +636,21 @@ class Loonk {
       tPoint.cp1.x = newPoint.cp1.x;
       tPoint.cp1.y = newPoint.cp1.y;
 
-      // this.selectPath(e)
-      /* insert the new point at the right index */
-      // console.log(this.m_newPointInsertIndex)
       this.m_path.m_points.splice(this.m_newPointInsertIndex, 0, tPoint);
 
-      /* Update prev point's controls */
-      // var prevIndex = this.m_path.m_points.indexOf(this.m_newPointPrev)
-      // var nextIndex = this.m_path.m_points.indexOf(this.m_newPointNext);
-      
       var currentPos = this.m_path.m_points.indexOf(tPoint);
-      // console.log(currentPos);
 
       var prevIndex = currentPos-1;
       var nextIndex = currentPos+1;
 
       if(this.m_newPointInsertIndex == 0) 
       {
-
-        console.log({prevIndex, nextIndex})
-        console.log(this.m_path.m_points)
-        
-        prevIndex = 1;
+        prevIndex = 0;
         nextIndex = this.m_path.m_points.length - 1; 
 
-
-        // this.m_path.m_points[currentPos].cp1.x = endPoint.cp.x;
-        // this.m_path.m_points[currentPos].cp1.y = endPoint.cp.y;
-
-        this.m_path.m_points[prevIndex].cp0.x = endPoint.cp.x;
-        this.m_path.m_points[prevIndex].cp0.y = endPoint.cp.y;
-        /* Update next point's controls */
+        this.m_path.m_points[prevIndex].cp1.x = newPoint.cp1.x;
+        this.m_path.m_points[prevIndex].cp1.y = newPoint.cp1.y;
+        
         this.m_path.m_points[nextIndex].cp1.x = startPoint.cp.x;
         this.m_path.m_points[nextIndex].cp1.y = startPoint.cp.y;
       }
@@ -1315,6 +1297,8 @@ class Loonk {
 
           // Init new path....
           // this.initPath()
+
+          // console.log(this.m_path.m_points)
       
       }
 

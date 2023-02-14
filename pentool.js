@@ -48,6 +48,8 @@
   var SHIFT_DOWN = false;
   var ALT_DOWN = false;
 
+  var CONTROL_DOWN_KEY = "17";
+  var P_DOWN_KEY = "KeyP";
  ////////////////////////
 
 
@@ -313,12 +315,10 @@ class Loonk {
     {
             
       // // Presets
-      this.m_drawing = false   
-      this.m_drawEnded = true;
 
       this.m_drawState = DRAW_STATE.MODIFY;
       this.m_pathState = PATH_STATE.SELECTED; // select the current path for edition
-    
+
     }
 
     initPath()
@@ -329,8 +329,6 @@ class Loonk {
       this.m_mouseState = MOUSE_STATE.DEFAULT;
       this.m_pathState = PATH_STATE.ACTIVE;
   
-      this.m_drawing = true   
-      this.m_drawEnded = false   
       this.m_editCpBalance = false  
       this.m_isNewEndPoint = false   
       this.m_currentSelectedPoint = null   
@@ -355,11 +353,14 @@ class Loonk {
       this.m_currentPath.m_path = this.m_path; // set path ref
       /** --------------------------- */
       /** Predictor */
+      this.removeHelperPath();
       this.m_predictorPath = this.createPredictorPathElement();
       /** -------------------------- */
 
       this.m_currentPath._hoverHelper = null;
       this.m_pathElements.push(this.m_currentPath)
+
+      this.setCursor("pen")
 
     }
 
@@ -394,7 +395,10 @@ class Loonk {
       // On path and INSERT mode : Insert new point on path
       if(this.m_drawState == DRAW_STATE.INSERT)
       {
-        this.insertNewPointToBezier()
+        if(e.detail == 1) // Fixing double click double insertion bug
+        {
+          this.insertNewPointToBezier()
+        }
       }
 
       // On existing point and MODIFY mode : Transform into curve/straight point
@@ -470,7 +474,7 @@ class Loonk {
       let pos = this.positionToCanvas(e.clientX, e.clientY)
       let csp = this.m_currentSelectedPoint // current selected point
 
-      if(!this.m_path.m_isClosed)
+      if(!this.m_path.m_isClosed && this.m_drawState != DRAW_STATE.NONE)
         this.setCursor("pen")
 
       if(e.buttons != 1) // Not Draging
@@ -481,8 +485,7 @@ class Loonk {
         {
          this.setPredictor(pos)
         }
-
-        // if(this.m_drawEnded)
+ 
         if(this.m_pathState ==  PATH_STATE.SELECTED)
         {
           var target = e.target; // To filter endpoints/controlpoints
@@ -565,13 +568,39 @@ class Loonk {
           this.render()
           break;
         case "Enter" :
+          if(this.m_path.m_points.length > 1)
+          {
+            this.render()
+          }
+          
           this.resetPath();
-          this.render()
+              
+          this.m_drawState = DRAW_STATE.NONE;
+          this.m_mouseState = MOUSE_STATE.DEFAULT;
+          this.m_pathState = PATH_STATE.NONE;
+
+          this.removePredictorPath();
+          this.removeControls();
+          this.setCursor("arrow")
+
+        
           break;
       }
 
-      if(e.which == "17") 
-        CONTROL_DOWN = true; // Ctrl down
+      // Ctrl down
+      if(e.which == CONTROL_DOWN_KEY) 
+        CONTROL_DOWN = true;
+
+      // Re-Start new Pen tool
+      if(e.code == P_DOWN_KEY)
+      {
+        if(this.m_drawState == DRAW_STATE.NONE)
+        {
+          this.initPath();
+        }
+      }
+
+
 
     }
 
@@ -1122,6 +1151,18 @@ class Loonk {
         this.m_svg.removeChild(el);
       });
     }
+
+    
+    removeControls()
+    {
+      // Remove all controls
+        
+      while(this.m_controls.hasChildNodes())
+      {
+        this.m_controls.removeChild(this.m_controls.lastChild);
+      }
+
+    }
   
     closePath() {
 
@@ -1306,7 +1347,6 @@ class Loonk {
         d += this.createBezier(prev_ep, ep)
         this.m_currentPath.setAttribute("d", d)
 
-        // if(this.m_drawEnded)
         if(this.m_pathState == PATH_STATE.SELECTED)
         {
           // Remove predictor path from DOM

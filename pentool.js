@@ -615,13 +615,10 @@ class Loonk {
       var relativeIndex = this.getPointRelativeIndex(this.m_currentHoverPoint, start, end);
 
       if(this.m_newPointInsertIndex == 0)
-      {
         relativeIndex = this.getPointReverseRelativeIndex(this.m_currentHoverPoint, start, end);
-      }
 
       var result = this.splitBezier(start, start.cp1, end.cp0, end, relativeIndex);
 
-      console.log(result)
       // The following logic relies on "bezierCurveTo" Method logic 
       // in order to set for each point it's control points (insertedPoint and nextPoint)
       var newPoint = result.newPoint; // Presets of the New point to insert
@@ -630,18 +627,17 @@ class Loonk {
 
       // Define new point's controls
       var tPoint = this.createEndPoint(this.m_currentHoverPoint.x, this.m_currentHoverPoint.y)
-
+      /** Control points */
       tPoint.cp0.x = newPoint.cp0.x;  
       tPoint.cp0.y = newPoint.cp0.y;
       tPoint.cp1.x = newPoint.cp1.x;
       tPoint.cp1.y = newPoint.cp1.y;
 
+      // Insert the new point
       this.m_path.m_points.splice(this.m_newPointInsertIndex, 0, tPoint);
-
-      var currentPos = this.m_path.m_points.indexOf(tPoint);
-
-      var prevIndex = currentPos-1;
-      var nextIndex = currentPos+1;
+    
+      var prevIndex = this.m_newPointInsertIndex-1;
+      var nextIndex = this.m_newPointInsertIndex+1;
 
       if(this.m_newPointInsertIndex == 0) 
       {

@@ -299,6 +299,11 @@ class Loonk {
     this.m_path = null;
 
 
+    // History
+    this.m_history = [];
+    this.m_historyIndex = -1;
+    
+
   }
     start () {
   

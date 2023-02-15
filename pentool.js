@@ -395,7 +395,8 @@ class Loonk {
       // On path and INSERT mode : Insert new point on path
       if(this.m_drawState == DRAW_STATE.INSERT)
       {
-        if(e.detail == 1) // Fixing double click double insertion bug
+        var elem = e.target;
+        if(e.detail == 1 && !this.isEndPoint(elem)) // Fixing double click double insertion bug
         {
           this.insertNewPointToBezier()
         }
@@ -518,6 +519,8 @@ class Loonk {
 
             csp.ep.calculateControlPoint(pos.x, pos.y, this.m_draggingControlPoint)
 
+
+
         } 
         else if(this.m_currentSelectedPoint && this.m_drawState != DRAW_STATE.INSERT)
         {
@@ -539,6 +542,7 @@ class Loonk {
             csp.cp0.y += offset.y
 
         }
+        // this.setPredictor(pos)
   
         this.render()
 
@@ -1245,7 +1249,7 @@ class Loonk {
   
     isEndPoint(_point)
     {
-      if(!(_point instanceof SVGCircleElement))
+      if(!(_point instanceof SVGElement))
       {
         return (_point.element.classList.contains(END_POINT_CLASS))
       }

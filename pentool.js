@@ -299,6 +299,8 @@ class Loonk {
     this.m_path = null;
 
 
+    this.m_selectedPath = null;
+
     // History
     this.m_history = [];
     this.m_historyIndex = -1;
@@ -323,6 +325,7 @@ class Loonk {
 
       this.m_drawState = DRAW_STATE.MODIFY;
       this.m_pathState = PATH_STATE.SELECTED; // select the current path for edition
+      // this.m_selectedPath = null;
 
     }
 
@@ -365,7 +368,16 @@ class Loonk {
       this.m_currentPath._hoverHelper = null;
       this.m_pathElements.push(this.m_currentPath)
 
+      // this.initSelectable(this.m_currentPath)
+
       this.setCursor("pen")
+
+    }
+
+    initSelectable(_elem)
+    {
+       
+ 
 
     }
 
@@ -421,6 +433,12 @@ class Loonk {
         }
       }
       
+
+      // On unselected path and NONE(/MODIFY) mode : Select abd activate that path
+      if(this.m_drawState == DRAW_STATE.NONE)
+      {
+        this.selectPathAtDist()
+      }
 
       // UI Selection -------------------------------------------
       if(!this.isControlPoint(this.m_currentSelectedPoint))
@@ -483,6 +501,12 @@ class Loonk {
       if(!this.m_path.m_isClosed && this.m_drawState != DRAW_STATE.NONE)
         this.setCursor("pen")
 
+      if(this.m_drawState == DRAW_STATE.NONE)
+      {
+        this.hoverPathAtDist(this.m_currentPath, pos.x, pos.y)
+        return;
+      }
+
       if(e.buttons != 1) // Not Draging
       {
              
@@ -498,9 +522,16 @@ class Loonk {
           this.hoverAtDist(target, pos.x, pos.y)
         }
 
+
       }
       else
       {
+
+        // if(this.m_drawState == DRAW_STATE.NONE)
+        // {
+        //   this.hoverPathAtDist(this.m_currentPath, pos.x, pos.y)
+        //   return;
+        // }
 
         if(this.m_mouseState != MOUSE_STATE.DRAG) return;
 
@@ -523,8 +554,6 @@ class Loonk {
             this.m_draggingControlPoint.y = pos.y
 
             csp.ep.calculateControlPoint(pos.x, pos.y, this.m_draggingControlPoint)
-
-
 
         } 
         else if(this.m_currentSelectedPoint && this.m_drawState != DRAW_STATE.INSERT)
@@ -594,6 +623,7 @@ class Loonk {
 
         
           break;
+         
       }
 
       // Ctrl down
@@ -751,6 +781,58 @@ class Loonk {
       }
     }
 
+
+    hoverPathAtDist(_target, x, y) {
+      let minDist = MIN_HOVER_DIST;
+      const len = _target.m_shapePoints.length;
+
+      let closestPointIndex = -1;
+      for (let i = 0; i < len; i++) 
+      {
+        const point = _target.m_shapePoints[i];
+
+        const dist = (x - point.x) ** 2 + (y - point.y) ** 2;
+        if (dist < minDist) {
+          minDist = dist;
+          closestPointIndex = i;
+        }
+
+      }
+    
+      if (closestPointIndex !== -1) 
+      { 
+        _target.classList.add(LOONK_PATH_CLASS_HOVER)
+        this.m_selectedPath = _target;
+        
+      } 
+      else 
+      {
+        _target.classList.remove(LOONK_PATH_CLASS_HOVER)
+        this.m_selectedPath = null;
+      }
+
+    }
+
+    selectPathAtDist()
+    {
+      if(this.m_selectedPath != null)
+      {
+        this.activatePath(this.m_selectedPath)
+      }
+    }
+
+    activatePath(_elem)
+    {
+      this.m_path = _elem.m_path;
+      this.m_currentPath = _elem;
+      _elem.classList.remove(LOONK_PATH_CLASS_HOVER);
+
+      this.m_drawState = DRAW_STATE.MODIFY;
+      this.m_mouseState = MOUSE_STATE.DEFAULT;
+      this.m_pathState = PATH_STATE.ACTIVE;
+
+      this.render();
+    }
     // Replace (.getTotalLength + Loop through .getPointAtLength) : which is too memory consuming and lag causing
     getPointsAlongCurve(d) {
 
@@ -1252,6 +1334,15 @@ class Loonk {
       return null
     }
   
+    isElementPath(_elem)
+    {
+      if(_elem instanceof SVGElement)
+      {
+        return (_elem.classList.contains(LOONK_PATH_CLASS))
+      }
+      return false;
+    }
+
     isEndPoint(_point)
     {
       if(!(_point instanceof SVGElement))

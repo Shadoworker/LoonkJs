@@ -368,7 +368,7 @@ class Loonk {
       this.m_currentPath._hoverHelper = null;
       this.m_pathElements.push(this.m_currentPath)
 
-      // this.initSelectable(this.m_currentPath)
+      this.initSelectable(this.m_currentPath)
 
       this.setCursor("pen")
 
@@ -377,7 +377,26 @@ class Loonk {
     initSelectable(_elem)
     {
        
- 
+      this.m_svg.addEventListener('mousemove', (e)=>{
+        
+        var pos = this.positionToCanvas(e.clientX, e.clientY)
+        if(this.m_drawState == DRAW_STATE.NONE)
+        {
+          this.hoverPathAtDist(_elem, pos.x, pos.y)
+          return;
+        }
+
+      })
+
+      this.m_svg.addEventListener('mousedown', (e)=>{
+
+        var pos = this.positionToCanvas(e.clientX, e.clientY)
+        // On unselected path and NONE(/MODIFY) mode : Select abd activate that path
+        if(this.m_drawState == DRAW_STATE.NONE)
+        {
+          this.selectPathAtDist(_elem, pos.x, pos.y)
+        }
+      })
 
     }
 
@@ -434,11 +453,11 @@ class Loonk {
       }
       
 
-      // On unselected path and NONE(/MODIFY) mode : Select abd activate that path
-      if(this.m_drawState == DRAW_STATE.NONE)
-      {
-        this.selectPathAtDist()
-      }
+      // // On unselected path and NONE(/MODIFY) mode : Select abd activate that path
+      // if(this.m_drawState == DRAW_STATE.NONE)
+      // {
+      //   this.selectPathAtDist()
+      // }
 
       // UI Selection -------------------------------------------
       if(!this.isControlPoint(this.m_currentSelectedPoint))
@@ -501,11 +520,6 @@ class Loonk {
       if(!this.m_path.m_isClosed && this.m_drawState != DRAW_STATE.NONE)
         this.setCursor("pen")
 
-      if(this.m_drawState == DRAW_STATE.NONE)
-      {
-        this.hoverPathAtDist(this.m_currentPath, pos.x, pos.y)
-        return;
-      }
 
       if(e.buttons != 1) // Not Draging
       {
@@ -802,22 +816,36 @@ class Loonk {
       if (closestPointIndex !== -1) 
       { 
         _target.classList.add(LOONK_PATH_CLASS_HOVER)
-        this.m_selectedPath = _target;
         
       } 
       else 
       {
         _target.classList.remove(LOONK_PATH_CLASS_HOVER)
-        this.m_selectedPath = null;
       }
 
     }
 
-    selectPathAtDist()
+    selectPathAtDist(_target, x, y)
     {
-      if(this.m_selectedPath != null)
+      let minDist = MIN_HOVER_DIST;
+      const len = _target.m_shapePoints.length;
+
+      let closestPointIndex = -1;
+      for (let i = 0; i < len; i++) 
       {
-        this.activatePath(this.m_selectedPath)
+        const point = _target.m_shapePoints[i];
+
+        const dist = (x - point.x) ** 2 + (y - point.y) ** 2;
+        if (dist < minDist) {
+          minDist = dist;
+          closestPointIndex = i;
+        }
+
+      }
+    
+      if (closestPointIndex !== -1) 
+      { 
+        this.activatePath(_target)
       }
     }
 
@@ -832,6 +860,7 @@ class Loonk {
       this.m_pathState = PATH_STATE.ACTIVE;
 
       this.render();
+
     }
     // Replace (.getTotalLength + Loop through .getPointAtLength) : which is too memory consuming and lag causing
     getPointsAlongCurve(d) {

@@ -860,7 +860,7 @@ class Loonk {
 
       this.m_drawState = DRAW_STATE.MODIFY;
       this.m_mouseState = MOUSE_STATE.DEFAULT;
-      this.m_pathState = PATH_STATE.ACTIVE;
+      this.m_pathState = PATH_STATE.SELECTED;
 
       this.render();
 

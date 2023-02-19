@@ -633,8 +633,11 @@ class Loonk {
 
           this.removePredictorPath();
           this.removeControls();
-          this.setCursor("arrow")
+              
+          // Get Internal points...
+          this.updatePathInternalPoints(); 
 
+          this.setCursor("arrow")
         
           break;
          
